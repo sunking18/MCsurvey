@@ -366,7 +366,7 @@ const SCALES = [
   {
     key:'comm', name:'亲子沟通情况', short:'沟通', count:12, min:12, max:60, higherBetter:true,
     intro:'请仔细阅读以下每一项目，并根据您的实际情况选择一个最符合您的评分，表明这句话对您而言的正确程度。题目没有对错之分，请根据您的真实感受作答。',
-    options:['完全不符合','比较不符合','一般/不确定','比较符合','非常符合'],
+    options:['完全不符合','比较不符合','一般','比较符合','非常符合'],
     reverse:[4,8,9],
     questions:[
       {n:1,dim:'开放尊重',t:'我允许孩子在一些事情上和我有不同意见。'},
@@ -653,7 +653,7 @@ function renderQuestion(sc, q, idx){
 }
 
 function renderLieQuestion(name, text, idx){
-  const LIE_OPTS=['完全不符合','比较不符合','一般/不确定','比较符合','非常符合'];
+  const LIE_OPTS=['完全不符合','比较不符合','一般','比较符合','非常符合'];
   let opts='';
   LIE_OPTS.forEach((op,oi)=>{
     const val=oi+1;
