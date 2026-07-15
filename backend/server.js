@@ -35,6 +35,8 @@ const crypto = require('crypto');
 })();
 
 const app = express();
+// 部署在 Nginx 等反代后时，信任 X-Forwarded-* 头，确保 req.protocol 正确返回 https
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 3000;
 const EXPORT_KEY = process.env.EXPORT_KEY || 'admin123';
 
@@ -43,6 +45,9 @@ const EXPORT_KEY = process.env.EXPORT_KEY || 'admin123';
 const MP_APPID = process.env.MP_APPID || '';
 const MP_SECRET = process.env.MP_SECRET || '';
 const MP_ENABLED = !!(MP_APPID && MP_SECRET);
+// 可选：强制回调地址根域名（部署后若自动识别的协议/host 不对，可设此值，
+// 例如 https://survey.yourdomain.com）。留空则按请求头自动推导。
+const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
 
 const DB_DIR = path.join(__dirname, 'data');
 const DB_PATH = path.join(DB_DIR, 'responses.db');
@@ -57,6 +62,17 @@ app.get('/', (req, res) => res.sendFile(path.join(ROOT_DIR, 'index.html')));
 app.get('/index.html', (req, res) => res.sendFile(path.join(ROOT_DIR, 'index.html')));
 app.get('/admin.html', (req, res) => res.sendFile(path.join(ROOT_DIR, 'admin.html')));
 app.get('/poster.html', (req, res) => res.sendFile(path.join(ROOT_DIR, 'poster.html')));
+// 公众号网页授权域名校验文件（需放在网站根目录、公网可访问）；
+// 仅放行 MP_verify_*.txt 这种白名单文件名，避免泄露其他根目录文件。
+app.get(/^\/MP_verify_[A-Za-z0-9]+\.txt$/, (req, res) => {
+  const f = path.basename(req.path);
+  const fp = path.join(ROOT_DIR, f);
+  if (fs.existsSync(fp)) {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    return res.sendFile(fp);
+  }
+  res.status(404).end();
+});
 
 const db = new sqlite3.Database(DB_PATH);
 db.serialize(() => {
@@ -258,7 +274,9 @@ app.get('/api/export.csv', (req, res) => {
 // 1) 前端在微信内点击「开始作答」时调用：返回微信授权跳转地址
 app.get('/api/wechat/mp/start', (req, res) => {
   if (!MP_ENABLED) return res.json({ enabled: false });
-  const redirectUri = `${req.protocol}://${req.get('host')}/api/wechat/mp/callback`;
+  const redirectUri = PUBLIC_BASE_URL
+    ? `${PUBLIC_BASE_URL.replace(/\/$/, '')}/api/wechat/mp/callback`
+    : `${req.protocol}://${req.get('x-forwarded-host') || req.get('host')}/api/wechat/mp/callback`;
   const url = 'https://open.weixin.qq.com/connect/oauth2/authorize'
     + `?appid=${MP_APPID}`
     + `&redirect_uri=${encodeURIComponent(redirectUri)}`
