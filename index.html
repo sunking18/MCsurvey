@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>亲子心理健康问卷</title>
+<style>
+  :root{
+    /* 暖阳·生命力配色：珊瑚暖橙主色 + 暖绿生命力点缀 + 暖米背景 */
+    --green:#5b8c5a; --green-bg:#edf3ea;
+    --yellow:#e0a93b; --yellow-bg:#fbf1dc;
+    --orange:#e07a3e; --orange-bg:#fbe7da;
+    --red:#d9543b; --red-bg:#fbe6e1;
+    --ink:#3e332b; --sub:#8a7b6c; --line:#efe5da; --card:#fffcf8;
+    --brand:#e07a5f; --brand-soft:#fbeede;
+    --life:#7fa67f; /* 生命力暖绿点缀 */
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--ink);background:#fbf5ee;line-height:1.65;}
+  .wrap{max-width:820px;margin:0 auto;padding:24px 18px 80px;}
+
+  /* 欢迎卡片 */
+  .welcome-card{background:#fff;border-radius:16px;padding:28px 24px;margin-top:24px;box-shadow:0 4px 16px rgba(36,48,67,.06);text-align:center;}
+  .welcome-card h1{font-size:24px;color:var(--brand);margin:0 0 18px;}
+  .welcome-card .intro-card{text-align:left;background:#fdf6ef;border:1px solid #f0e4d8;border-radius:12px;padding:18px 20px;margin:18px 0;}
+  .welcome-card .intro-card .label{display:inline-block;background:var(--brand);color:#fff;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:8px;}
+  .welcome-card .intro-card p{margin:8px 0;font-size:14px;text-indent:2em;}
+  .welcome-card .intro-card p.no-indent{text-indent:0;}
+  .cover-tip{font-size:12.5px;color:var(--sub);margin-top:14px;}
+  .consent-box{font-size:13px;line-height:1.65;color:#7a5a48;background:#fbf3ea;border:1px solid #f0dcc8;border-left:4px solid var(--brand);border-radius:10px;padding:12px 14px;margin-top:14px;}
+  .consent-box b{color:var(--brand);}
+  .btn{display:inline-block;border:none;cursor:pointer;font-size:16px;font-weight:700;color:#fff;background:linear-gradient(135deg,#e89b7b,#e07a5f);
+    padding:15px 50px;border-radius:30px;box-shadow:0 6px 18px rgba(224,122,95,.26);transition:.15s;margin-top:10px;}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(224,122,95,.32);}
+  .btn.ghost{background:#fff;color:var(--brand);border:1.5px solid var(--brand);box-shadow:none;padding:10px 22px;font-size:13px;}
+  .btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+
+  /* 微信登录框 */
+  .wx-box{margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .wx-qr{width:240px;height:240px;background:#f3f5f9;border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .wx-qr iframe{width:100%;height:100%;border:0;}
+  .wx-status{font-size:13.5px;color:var(--sub);text-align:center;max-width:340px;line-height:1.6;}
+
+  /* 步骤 */
+  .step{display:none;}
+  .step.active{display:block;animation:fade .3s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .step-header{font-size:13px;color:var(--sub);margin-bottom:8px;}
+  .step-header b{color:var(--brand);}
+  .progress{height:6px;background:#efe5da;border-radius:3px;margin-bottom:16px;overflow:hidden;}
+  .progress .fill{height:100%;background:var(--brand);transition:width .3s;}
+
+  /* 卡片 */
+  section.card{background:var(--card);border-radius:16px;padding:22px 22px;margin-top:16px;box-shadow:0 4px 16px rgba(36,48,67,.06);}
+  .sec-title{font-size:18px;font-weight:700;margin:0 0 4px;}
+  .sec-sub{color:var(--sub);font-size:13px;margin:0 0 18px;}
+
+  /* 基础信息 */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:640px){.form-grid{grid-template-columns:1fr;}}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:13px;font-weight:600;}
+  .field label .req{color:var(--red);margin-left:3px;}
+  .field input,.field select,.field textarea{padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;outline:none;transition:.15s;font-family:inherit;}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brand);background:var(--brand-soft);}
+  .field textarea{resize:vertical;min-height:60px;}
+  .field .opts-row{display:flex;gap:12px;flex-wrap:wrap;}
+  .field .opts-row label{display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:13.5px;background:#fff;}
+  .field .opts-row label.checked{border-color:var(--brand);background:var(--brand-soft);font-weight:600;}
+  .field .opts-row input{accent-color:var(--brand);}
+  .err{color:var(--red);font-size:13px;margin-top:10px;display:none;}
+  .btn-row{display:flex;justify-content:center;gap:12px;margin-top:22px;flex-wrap:wrap;}
+
+  /* 问卷分段 */
+  .scale-block{margin:18px 0;padding:18px;border:1px solid var(--line);border-radius:14px;background:#fff;}
+  .scale-block .scale-intro{background:#fdf6ef;border:1px solid #f0e4d8;border-radius:12px;padding:14px 16px;margin-bottom:14px;}
+  .scale-block .scale-intro .part-label{display:inline-block;background:var(--brand);color:#fff;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:8px;}
+  .scale-block .scale-intro p{margin:6px 0;font-size:13.5px;text-indent:2em;}
+  .scale-block .scale-intro p.no-indent{text-indent:0;}
+  .scale-block .scale-title{font-size:16px;font-weight:700;color:var(--brand);margin:0 0 12px;}
+
+  /* 题目 */
+  .q{margin:12px 0;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fcfdff;}
+  .q .qt{font-size:14px;font-weight:500;margin-bottom:10px;}
+  .q .qt .qnum{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;background:var(--brand-soft);color:var(--brand);border-radius:8px;font-size:13px;margin-right:8px;font-weight:700;}
+  .opts{display:flex;flex-wrap:wrap;gap:8px;}
+  .opts label{flex:1 1 0;min-width:120px;display:flex;align-items:center;gap:7px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:13px;background:#fff;transition:.15s;}
+  .opts label:hover{border-color:var(--brand);background:var(--brand-soft);}
+  .opts input{accent-color:var(--brand);}
+  .opts label.checked{border-color:var(--brand);background:var(--brand-soft);font-weight:600;}
+
+  /* 报告 */
+  .banner{border-radius:16px;padding:18px 22px;display:flex;gap:14px;align-items:flex-start;margin-bottom:8px;border-left:6px solid;}
+  .banner .heart{font-size:26px;line-height:1;flex:none;}
+  .banner .btext{font-size:14.5px;}
+  .banner .btext .btitle{font-weight:800;font-size:15.5px;margin-bottom:3px;}
+  .banner .close{margin-top:10px;font-size:13px;opacity:.85;font-style:italic;}
+  .lv-green{background:var(--green-bg);border-color:var(--green);color:#1f6b3e;}
+  .lv-yellow{background:var(--yellow-bg);border-color:var(--yellow);color:#8a6200;}
+  .lv-orange{background:var(--orange-bg);border-color:var(--orange);color:#a44e06;}
+  .lv-red{background:var(--red-bg);border-color:var(--red);color:#9c2626;}
+
+  .overview{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:16px;}
+  @media(max-width:640px){.overview{grid-template-columns:1fr;}}
+  .scale-box{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff;text-align:center;}
+  .scale-box .sname{font-weight:700;font-size:14px;}
+  .scale-box .score{font-size:28px;font-weight:800;margin:6px 0 2px;}
+  .scale-box .score small{font-size:12px;font-weight:500;color:var(--sub);}
+  .scale-box .tip{font-size:12px;color:var(--sub);margin-top:6px;}
+
+  .chart-card{text-align:center;margin-top:18px;}
+  .chart-card h3{font-size:15px;margin:4px 0 2px;}
+  .chart-card .csub{font-size:12px;color:var(--sub);margin-bottom:6px;}
+  .legend{display:flex;justify-content:center;gap:18px;font-size:12px;color:var(--sub);margin-top:6px;flex-wrap:wrap;}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:middle;}
+  .radar-svg{width:100%;max-width:420px;height:auto;}
+
+  .dim-block{margin-top:18px;}
+  .dim-block h4{font-size:14.5px;margin:0 0 10px;display:flex;align-items:center;gap:8px;}
+  .dim-block h4 .d-score{margin-left:auto;font-size:13px;color:var(--sub);font-weight:600;}
+  .bar{margin:9px 0;}
+  .bar .blabel{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;}
+  .bar .blabel .b-dim{color:var(--sub);font-size:11px;}
+  .bar .track{height:13px;background:#eef1f5;border-radius:8px;overflow:hidden;}
+  .bar .fill{height:100%;border-radius:8px;transition:width .9s ease;}
+  .bar .bval{font-weight:700;}
+
+  .narrative{margin-top:18px;}
+  .narrative .n-block{border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:12px 0;background:#fff;}
+  .narrative .n-block h4{font-size:14.5px;margin:0 0 8px;color:var(--brand);}
+  .narrative .n-block p{margin:6px 0;font-size:13.5px;}
+
+  .course-block{background:linear-gradient(135deg,#fdf6ef,#fbeede);border:1px solid #f0e0d2;border-radius:16px;padding:18px 20px;margin-top:18px;}
+  .course-block h4{font-size:15px;margin:0 0 10px;color:var(--brand);}
+  .course-block p{margin:8px 0;font-size:13.5px;}
+  .course-block ul.course-list{margin:10px 0;padding-left:20px;}
+  .course-block li{font-size:13.5px;margin:8px 0;line-height:1.65;}
+
+  .ending{text-align:center;margin-top:22px;padding:16px;background:#fff;border:1px solid var(--line);border-radius:16px;}
+  .ending .quote{font-size:15.5px;font-weight:700;color:var(--brand);margin:0 0 6px;}
+  .ending .sub{font-size:13px;color:var(--sub);margin:0;}
+
+  .report-foot{text-align:center;margin-top:22px;color:var(--sub);font-size:13px;font-style:italic;}
+  .disclaimer{font-size:11.5px;color:#b0a394;margin-top:14px;text-align:center;line-height:1.5;}
+  .report-actions{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap;}
+  .save-status{text-align:center;font-size:13px;margin-top:10px;display:none;}
+  .save-status.ok{color:var(--green);}
+  .save-status.fail{color:var(--red);}
+  .save-status.warn{color:var(--orange);}
+  .param-error{background:#fbe6e1;border:1px solid #f0c4b8;border-radius:12px;padding:16px;color:#a83a28;text-align:center;margin-top:16px;}
+
+  /* 弹窗提示 */
+  .modal{display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;}
+  .modal.show{display:flex;}
+  .modal-bg{position:absolute;inset:0;background:rgba(62,51,43,.35);}
+  .modal-box{position:relative;background:var(--card);border-radius:16px;padding:24px;max-width:440px;width:calc(100% - 36px);margin:auto;box-shadow:0 12px 40px rgba(62,51,43,.2);text-align:center;border:1px solid var(--line);}
+  .modal-title{font-size:17px;font-weight:800;color:var(--brand);margin-bottom:10px;}
+  .modal-body{font-size:14px;color:var(--ink);text-align:left;line-height:1.7;max-height:50vh;overflow-y:auto;}
+  .modal-body ul{margin:8px 0;padding-left:18px;}
+  .modal-body li{margin:4px 0;}
+
+  @media print{
+    body{background:#fff;}
+    .welcome-card,.step-nav,.report-actions,.q{display:none;}
+    section.card{box-shadow:none;border:1px solid #ddd;page-break-inside:avoid;}
+    .wrap{padding:0;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 步骤 0：欢迎页 -->
+  <div id="step-welcome" class="step active">
+    <div class="welcome-card">
+      <h1>亲子心理健康问卷</h1>
+      <div class="intro-card">
+        <span class="label">问卷说明</span>
+        <p>尊敬的家长朋友：</p>
+        <p>您好！感谢您对本次职工子女心理健康项目的支持，更感谢您在百忙之中愿意抽出 5 分钟左右参与本次调研。</p>
+        <p>本问卷旨在了解您作为父母/主要照料者，对孩子成长与家庭日常的一些观察与感受。答案无对错之分，请根据您的实际情况选择最合适的选项。</p>
+        <p>您的参与完全自愿，您的选择将严格保密，仅供本项目研究使用，请放心作答。祝您工作顺利，生活愉快！</p>
+        <div class="consent-box">
+          <b>知情同意：</b>本次作答将收集您填写的基础信息，以及设备型号、网络地址、答题时间等系统数据，仅用于本项目研究与服务优化，严格保密。点击「开始作答」即表示您已知晓并同意上述说明。
+        </div>
+      </div>
+      <button class="btn" onclick="startSurvey()">开始作答</button>
+      <p class="cover-tip">微信扫描海报二维码即可在手机上作答，约需 5 分钟。</p>
+    </div>
+  </div>
+
+  <!-- 步骤 1：基础信息 -->
+  <div id="step-basic" class="step">
+    <div class="step-header">步骤 <b>1 / 3</b>：基础信息</div>
+    <div class="progress"><div class="fill" style="width:33%"></div></div>
+    <section class="card">
+      <div class="sec-title">该部分想了解您的基础信息</div>
+      <div class="sec-sub">请根据您的实际情况进行选择和填写。带 <span style="color:var(--red)">*</span> 为必填项。</div>
+      <form id="basicForm">
+        <div class="form-grid">
+          <div class="field">
+            <label>您的性别<span class="req">*</span></label>
+            <div class="opts-row" id="gender-opts">
+              <label><input type="radio" name="gender" value="男"> 男</label>
+              <label><input type="radio" name="gender" value="女"> 女</label>
+            </div>
+          </div>
+          <div class="field">
+            <label>您的年龄<span class="req">*</span></label>
+            <select name="age">
+              <option value="">请选择</option>
+              <option>25岁以下</option>
+              <option>26-35岁</option>
+              <option>36-45岁</option>
+              <option>46-55岁</option>
+              <option>56岁以上</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>您的职业</label>
+            <input type="text" name="occupation" placeholder="如：企业职员/教师/自由职业">
+          </div>
+          <div class="field">
+            <label>家庭月收入</label>
+            <select name="income">
+              <option value="">请选择</option>
+              <option>5000元以下</option>
+              <option>5000-10000元</option>
+              <option>10000-20000元</option>
+              <option>20000元以上</option>
+              <option>不便透露</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>联系方式</label>
+            <input type="text" name="contact" placeholder="手机号或邮箱，用于后续服务联系">
+          </div>
+          <div class="field">
+            <label>您有几个子女<span class="req">*</span></label>
+            <select name="children_count" id="children_count" onchange="renderChildrenFields()">
+              <option value="">请选择</option>
+              <option value="1">1个</option>
+              <option value="2">2个</option>
+              <option value="3">3个</option>
+              <option value="4个及以上">4个及以上</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="identity-fields">
+          <div class="sec-sub" style="margin-top:18px">身份识别信息（用于区分不同的填写者，<b>以下带 <span style="color:var(--red)">*</span> 项所有填写者均需填写</b>）。</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>姓名首字母缩写<span class="req">*</span></label>
+              <input type="text" name="name_code" maxlength="8" placeholder="如：张伟 → ZW">
+            </div>
+            <div class="field">
+              <label>手机号后四位<span class="req">*</span></label>
+              <input type="text" name="phone_last4" maxlength="4" inputmode="numeric" placeholder="如：8000">
+            </div>
+            <div class="field">
+              <label>所在城市<span class="req">*</span></label>
+              <select name="city">
+                <option value="">请选择</option>
+                <optgroup label="直辖市">
+                  <option>北京市</option><option>上海市</option><option>天津市</option><option>重庆市</option>
+                </optgroup>
+                <optgroup label="主要城市">
+                  <option>成都市</option><option>西安市</option><option>广州市</option><option>深圳市</option>
+                  <option>杭州市</option><option>南京市</option><option>武汉市</option><option>郑州市</option>
+                  <option>石家庄市</option><option>太原市</option><option>沈阳市</option><option>长春市</option>
+                  <option>哈尔滨市</option><option>济南市</option><option>青岛市</option><option>合肥市</option>
+                  <option>福州市</option><option>厦门市</option><option>南昌市</option><option>长沙市</option>
+                  <option>昆明市</option><option>兰州市</option><option>乌鲁木齐市</option><option>银川市</option>
+                  <option>西宁市</option><option>呼和浩特市</option><option>南宁市</option><option>海口市</option>
+                  <option>贵阳市</option><option>拉萨市</option>
+                </optgroup>
+                <option>其他（请于备注说明）</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>社区 / 厂区<span class="req">*</span></label>
+              <input type="text" name="area" placeholder="如：XX社区 / XX厂区">
+            </div>
+          </div>
+        </div>
+
+        <div id="children-fields"></div>
+      </form>
+      <div class="err" id="basicErr">请填写完整必填项后再继续。</div>
+      <div class="btn-row">
+        <button class="btn ghost" onclick="goWelcome()">返回</button>
+        <button class="btn" onclick="goQuiz()">下一步：填写问卷</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- 步骤 2：问卷 -->
+  <div id="step-quiz" class="step">
+    <div class="step-header">步骤 <b>2 / 3</b>：问卷填写</div>
+    <div class="progress"><div class="fill" style="width:66%"></div></div>
+    <section class="card">
+      <div class="sec-title">本部分包含 35 个题项</div>
+      <div class="sec-sub">请仔细阅读每一项目，并根据您的实际情况选择最符合您的评分。题目无对错之分。</div>
+      <form id="quizForm">
+        <!-- 题目由 JS 渲染 -->
+      </form>
+      <div class="err" id="quizErr">请先完成所有题目再提交。</div>
+      <div class="btn-row">
+        <button class="btn ghost" onclick="goBasic()">返回修改信息</button>
+        <button class="btn" onclick="submitQuiz()">提交并查看报告</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- 步骤 3：报告 -->
+  <div id="step-report" class="step">
+    <div class="step-header">步骤 <b>3 / 3</b>：您的个人报告</div>
+    <div class="progress"><div class="fill" style="width:100%"></div></div>
+    <section class="card">
+      <div id="banner" class="banner"></div>
+      <div class="overview" id="overview"></div>
+
+      <div class="chart-card">
+        <h3>关注指数雷达图</h3>
+        <div class="csub">越靠外圈，越值得关注。三个维度分别反映您观察到的<b>亲子沟通情况</b>、<b>家长对孩子学业的焦虑水平</b>，以及<b>您认为孩子的心理韧性水平</b>。</div>
+        <div id="radar"></div>
+        <div class="legend">
+          <span><i style="background:#e07a5f"></i>关注指数（0=状态好，100=较需关注）</span>
+        </div>
+      </div>
+
+      <div id="narrative"></div>
+
+      <div id="course"></div>
+
+      <div id="ending" class="ending"></div>
+
+      <div class="report-foot" id="reportFoot"></div>
+      <div class="save-status" id="saveStatus"></div>
+      <div class="disclaimer">说明：以上分层为项目初版解释，用于筛查参考；正式推广前建议基于试点样本校准。如报告提示「较高关注」，建议前往专业机构进一步评估。</div>
+
+      <div class="report-actions">
+        <button class="btn ghost" onclick="closeReport()">✕ 关闭</button>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<!-- 弹窗提示 -->
+<div id="modal" class="modal">
+  <div class="modal-bg" onclick="closeModal()"></div>
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">提示</div>
+    <div class="modal-body" id="modal-body"></div>
+    <button class="btn" onclick="closeModal()" style="margin-top:14px;">我知道了</button>
+  </div>
+</div>
+
+<script>
+/* ================= 问卷数据 ================= */
+const SCALES = [
+  {
+    key:'comm', name:'亲子沟通情况', short:'沟通', count:12, min:12, max:60, higherBetter:true,
+    intro:'请仔细阅读以下每一项目，并根据您的实际情况选择一个最符合您的评分，表明这句话对您而言的正确程度。题目没有对错之分，请根据您的真实感受作答。',
+    options:['完全不符合','比较不符合','一般/不确定','比较符合','非常符合'],
+    reverse:[4,8,9],
+    questions:[
+      {n:1,dim:'开放尊重',t:'我允许孩子在一些事情上和我有不同意见。'},
+      {n:2,dim:'规则协商',t:'和孩子谈家庭规则或安排时，我会让孩子参与讨论。'},
+      {n:3,dim:'主动询问',t:'和孩子谈事情时，我会主动询问孩子的看法。'},
+      {n:4,dim:'控制式沟通',t:'和孩子讨论事情时，我常常坚持自己说了算。'},
+      {n:5,dim:'开放表达',t:'我鼓励孩子表达不同意见，并说明自己的理由。'},
+      {n:6,dim:'引导讨论',t:'我会鼓励孩子从不同角度看问题。'},
+      {n:7,dim:'孩子表达意愿',t:'孩子愿意告诉我他在想什么。'},
+      {n:8,dim:'情绪升级',t:'孩子不认同我的观点时，我通常会很生气。'},
+      {n:9,dim:'批评优先',t:'孩子做得不好时，我会先批评，而不是先了解原因和想法。'},
+      {n:10,dim:'情感沟通',t:'我和孩子会谈论彼此的感受和情绪。'},
+      {n:11,dim:'沟通安全感',t:'即使意见不一致，孩子也愿意和我讲话。'},
+      {n:12,dim:'倾听接纳',t:'即使不同意孩子的观点，我也愿意认真听他说完。'}
+    ],
+    levelOf(score){
+      if(score>=45) return {label:'优秀',severity:0};
+      if(score>=37) return {label:'良好',severity:1};
+      if(score>=32) return {label:'一般',severity:2};
+      return {label:'不容乐观',severity:3};
+    },
+    concern(score){ return clamp((this.max-score)/(this.max-this.min)*100); },
+    desc(score){
+      if(score>=45) return '您和孩子的沟通情况非常优秀。你们之间彼此信任，孩子愿意主动和您交流他遇到的问题和情况，您也能够耐心倾听、不厌其烦地给予他帮助和支持。这份关系是孩子成长中最重要的底气。';
+      if(score>=37) return '您和孩子的沟通情况良好。大多数时候，孩子愿意向您表达自己的想法，您也能给予他回应和支持。继续保持开放和尊重，你们之间的连接会更有深度。';
+      if(score>=32) return '您和孩子的沟通情况处于一般水平。也许在某些时刻，您会感到孩子不太愿意开口，或者您和孩子的对话容易陷入说教或争执。试着在冲突时先停一停，听听孩子真正想说什么。若持续感到困难，亲子沟通主题团辅可以为您提供一些实用方法。';
+      return '您和孩子的沟通情况目前不太乐观。可能孩子较少主动表达，或者在沟通中您和孩子都容易感到挫败。这并不意味着您做得不好，而是说明您需要一些方法来重新走进孩子的内心。建议您参加亲子沟通主题团辅，学习更有效的倾听与回应方式。';
+    }
+  },
+  {
+    key:'anx', name:'学业焦虑', short:'焦虑', count:12, min:12, max:60, higherBetter:false,
+    intro:'请仔细阅读以下每一项目，并根据您的实际情况选择一个最符合您的评分，表明这句话对您而言的正确程度。题目没有对错之分，请根据您的真实感受作答。',
+    options:['从不','有时','一般','经常','总是'],
+    reverse:[],
+    questions:[
+      {n:1,dim:'学习状态担忧',t:'孩子学习时经常心不在焉、注意力难以集中，让我感到苦恼。'},
+      {n:2,dim:'父母能力焦虑',t:'我担心自己的能力不足，无法为孩子提供更好的教育支持。'},
+      {n:3,dim:'教育资源焦虑',t:'想到自己无法为孩子提供更多或更好的教育资源，我会感到心烦。'},
+      {n:4,dim:'考试焦虑',t:'孩子临近重要考试时，我比平时更容易紧张和焦躁。'},
+      {n:5,dim:'焦虑外化',t:'孩子学习态度不够认真时，我会感到着急，甚至忍不住批评他。'},
+      {n:6,dim:'考试焦虑',t:'孩子备考重要考试时，我会紧张得睡不好。'},
+      {n:7,dim:'成绩焦虑',t:'孩子考试没考好时，我会急得坐立不安。'},
+      {n:8,dim:'教育投入焦虑',t:'孩子的教育费用支出较多时，我会感到经济负担较重。'},
+      {n:9,dim:'父母无力感',t:'孩子的作业或学习问题我辅导不来时，会感到无助。'},
+      {n:10,dim:'学校环境焦虑',t:'想到孩子所在班级或学校的学习环境可能影响学习，我会感到烦心。'},
+      {n:11,dim:'学习执行担忧',t:'孩子做作业拖拉、经常不能按时完成时，我会感到着急。'},
+      {n:12,dim:'学习自主性担忧',t:'想到如果没人监督孩子就不会主动学习，我会感到无助。'}
+    ],
+    levelOf(score){
+      if(score<=27) return {label:'不怎么焦虑',severity:0};
+      if(score<=35) return {label:'一般',severity:1};
+      if(score<=43) return {label:'较强',severity:2};
+      return {label:'很强',severity:3};
+    },
+    concern(score){ return clamp((score-this.min)/(this.max-this.min)*100); },
+    desc(score){
+      if(score<=27) return '您对孩子的学业焦虑较低。您能够比较从容地看待孩子的学习，孩子也不会因为您而感到太大的压力。这种松弛的状态对孩子来说非常珍贵。';
+      if(score<=35) return '您对孩子的学业焦虑处于一般水平。您会关心孩子的学习，但通常能够控制在合理的范围内。继续保持这种适度的关注，不把它变成催促。';
+      if(score<=43) return '您对孩子的学业焦虑较强。您会比较担心孩子的成绩、学习习惯或未来发展，这种焦虑有时可能会不自觉地传递给孩子。试着把关注点从结果移向过程，并考虑参加家长焦虑调节主题团辅，会让自己和孩子都轻松一些。';
+      return '您对孩子的学业焦虑很强。您可能会经常为孩子的学习感到紧张、睡不好或忍不住催促。这背后是您对孩子的爱与期待，但也可能让家里充满压力。请优先照顾好自己的情绪，并建议参加家长焦虑调节主题团辅，因为您的稳定是孩子最大的安全感。';
+    }
+  },
+  {
+    key:'res', name:'心理韧性', short:'韧性', count:10, min:10, max:50, higherBetter:true,
+    intro:'请仔细阅读以下每一项目，并根据您的实际情况选择一个最符合您的评分，表明这句话对您而言的正确程度。题目没有对错之分，请根据您的真实感受作答。',
+    options:['从不这样','很少这样','有时这样','经常这样','总是这样'],
+    reverse:[],
+    questions:[
+      {n:1,dim:'适应变化',t:'当事情和以前不一样时，孩子通常能慢慢适应。'},
+      {n:2,dim:'应对困难',t:'遇到不顺利或不好的事情时，孩子通常会尝试想办法应对。'},
+      {n:3,dim:'情绪调节',t:'遇到让人头疼的难题时，孩子能尝试让自己放松或心情好一些。'},
+      {n:4,dim:'成长感',t:'努力解决麻烦之后，孩子通常能从中获得经验或信心。'},
+      {n:5,dim:'恢复力',t:'生病、受伤、受挫或难过之后，孩子通常能较快恢复。'},
+      {n:6,dim:'自我效能',t:'即使过程有点困难，孩子通常仍相信自己可以完成或做好。'},
+      {n:7,dim:'压力下专注',t:'心里着急时，孩子仍能尽量专注，把事情想清楚。'},
+      {n:8,dim:'坚持性',t:'即使一件事没做好，孩子也不容易马上放弃。'},
+      {n:9,dim:'勇于面对',t:'遇到困难和挑战时，孩子愿意面对或继续尝试。'},
+      {n:10,dim:'情绪平复',t:'当孩子伤心、害怕或想发脾气时，通常知道怎样让自己慢慢平静下来。'}
+    ],
+    levelOf(score){
+      if(score>=38) return {label:'较高',severity:0};
+      if(score>=30) return {label:'良好',severity:1};
+      if(score>=23) return {label:'一般',severity:2};
+      return {label:'较弱',severity:3};
+    },
+    concern(score){ return clamp((this.max-score)/(this.max-this.min)*100); },
+    desc(score){
+      if(score>=38) return '孩子的心理韧性水平较高。他能够较好地适应变化、调节情绪，并在遇到困难时坚持和尝试。这些能力将帮助他在未来面对更多挑战。';
+      if(score>=30) return '孩子的心理韧性水平良好。他在多数情况下能够应对压力和挫折，只是在特别大或持续的挑战中可能需要多一些支持。';
+      if(score>=23) return '孩子的心理韧性水平一般。面对困难或变化时，他有时会感到无措或退缩。这是成长中的常见现象，通过一些练习和支持可以得到提升。儿童心理韧性主题团辅能够帮助孩子学习情绪调节与问题解决的方法。';
+      return '孩子的心理韧性水平较弱。在遇到挫折、压力或变化时，他可能容易沮丧、难以自我调节。这并不代表孩子脆弱，而是说明他需要更多的陪伴和方法来建立内心的力量。建议参加儿童心理韧性主题团辅，帮助孩子逐步培养应对困难的能力。';
+    }
+  }
+];
+
+function clamp(v){ return Math.max(0,Math.min(100,Math.round(v))); }
+
+const API_BASE = '/api'; // 后端接口基地址，若前后端分离请改成实际域名
+
+let currentScores = null;
+let currentUser = {};
+let isReportOnly = false; // 是否从问卷星跳转进入的简版模式
+let currentLieFlag = 0;    // 测谎题标记：0 正常，1 可疑
+let startTime = null;     // 开始作答时间（点击「开始作答」时记录）
+
+/* ================= 页面切换 ================= */
+function showStep(id){
+  document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('step-'+id).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function goWelcome(){ showStep('welcome'); }
+function goBasic(){ showStep('basic'); }
+function goQuiz(){
+  const {ok,missing}=checkBasic();
+  if(!ok){
+    showModal('请完善信息','<p>请补全以下必填项后再继续：</p><ul>'+missing.map(x=>'<li>'+x+'</li>').join('')+'</ul>');
+    return;
+  }
+  document.getElementById('basicErr').style.display='none';
+  showStep('quiz');
+}
+
+function checkBasic(){
+  const b=collectBasic();
+  const missing=[];
+  if(!b.gender) missing.push('您的性别');
+  if(!b.age) missing.push('您的年龄');
+  if(!b.children_count) missing.push('您有几个子女');
+  // 身份识别字段：所有人均需填写
+  if(!b.name_code) missing.push('姓名首字母缩写');
+  if(!b.phone_last4) missing.push('手机号后四位');
+  if(!b.city) missing.push('所在城市');
+  if(!b.area) missing.push('社区 / 厂区');
+  return {ok:missing.length===0, missing};
+}
+function validateBasic(){ return checkBasic().ok; }
+
+function showModal(title,html){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('show');
+}
+
+/* ================= 封面：开始作答 ================= */
+function collectDevice(){
+  const ua=navigator.userAgent;
+  let deviceModel='PC';
+  if(/iPhone/.test(ua)) deviceModel='iPhone';
+  else if(/iPad/.test(ua)) deviceModel='iPad';
+  else if(/Android/.test(ua)) deviceModel='Android';
+  else if(/Macintosh/.test(ua)) deviceModel='Mac';
+  else if(/Windows/.test(ua)) deviceModel='Windows';
+  else if(/Linux/.test(ua)) deviceModel='Linux';
+  return {
+    ua,
+    device_model:deviceModel,
+    screen:(window.screen && window.screen.width) ? (window.screen.width+'x'+window.screen.height) : '',
+    platform:(navigator.platform||'')
+  };
+}
+function startSurvey(){
+  // 记录开始作答时间，用于计算答题时长
+  startTime=new Date().toISOString();
+  goBasic();
+}
+
+/* ================= 基础信息 ================= */
+function collectBasic(){
+  const f=document.getElementById('basicForm');
+  const fd=new FormData(f);
+  const obj={};
+  fd.forEach((v,k)=>obj[k]=typeof v==='string'?v.trim():v);
+  return obj;
+}
+function initRadioGroups(){
+  ['gender-opts','child-gender-opts'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('change',e=>{
+      if(e.target.type==='radio'){
+        e.target.closest('.opts-row').querySelectorAll('label').forEach(l=>l.classList.remove('checked'));
+        e.target.closest('label').classList.add('checked');
+      }
+    });
+  });
+}
+
+function renderChildrenFields(){
+  const countSel=document.getElementById('children_count').value;
+  const container=document.getElementById('children-fields');
+  if(!countSel){container.innerHTML='';return;}
+  let count=parseInt(countSel,10);
+  if(isNaN(count)) count=4;
+  let html='<div class="form-grid" style="margin-top:14px;">';
+  for(let i=1;i<=count;i++){
+    html+=`
+      <div class="field">
+        <label>子女${i}年龄</label>
+        <input type="number" name="child_age_${i}" min="3" max="22" placeholder="岁">
+      </div>
+      <div class="field">
+        <label>子女${i}性别</label>
+        <div class="opts-row child-gender-opts" data-idx="${i}">
+          <label><input type="radio" name="child_gender_${i}" value="男"> 男</label>
+          <label><input type="radio" name="child_gender_${i}" value="女"> 女</label>
+        </div>
+      </div>`;
+  }
+  html+='</div>';
+  container.innerHTML=html;
+  // 重新绑定动态生成的单选样式
+  container.querySelectorAll('.child-gender-opts').forEach(row=>{
+    row.addEventListener('change',e=>{
+      if(e.target.type==='radio'){
+        row.querySelectorAll('label').forEach(l=>l.classList.remove('checked'));
+        e.target.closest('label').classList.add('checked');
+      }
+    });
+  });
+}
+
+/* ================= 渲染问卷（按量表分块，带指导语） ================= */
+function renderQuiz(){
+  const form=document.getElementById('quizForm');
+  let html='';
+  let globalIdx=1;
+  SCALES.forEach((sc,si)=>{
+    const partNames=['第一部分','第二部分','第三部分'];
+    html+=`<div class="scale-block">
+      <div class="scale-intro">
+        <span class="part-label">${partNames[si]}</span>
+        <p>${sc.intro}</p>
+      </div>
+      <div class="scale-title">${sc.name}</div>`;
+    sc.questions.forEach((q)=>{
+      // 注意力检测题：嵌入第一部分倒数第二题（Q11）之前，不单独显示检测区块与维度标签
+      if(si===0 && q.n===11){
+        html+=renderLieQuestion('lie_1', '为确保您在认真阅读每道题，本题请直接选择「非常符合」。', globalIdx);
+        globalIdx++;
+      }
+      html+=renderQuestion(sc, q, globalIdx);
+      globalIdx++;
+    });
+    html+=`</div>`;
+  });
+  form.innerHTML=html;
+  form.addEventListener('change',e=>{
+    if(e.target.type==='radio'){
+      const grp=e.target.closest('.opts');
+      grp.querySelectorAll('label').forEach(l=>l.classList.remove('checked'));
+      e.target.closest('label').classList.add('checked');
+    }
+  });
+}
+
+function renderQuestion(sc, q, idx){
+  const gid=`${sc.key}_${q.n}`;
+  let opts='';
+  sc.options.forEach((op,oi)=>{
+    const val=oi+1;
+    opts+=`<label><input type="radio" name="${gid}" value="${val}"><span>${val}. ${op}</span></label>`;
+  });
+  return `<div class="q">
+    <div class="qt"><span class="qnum">${idx}</span>${q.t}</div>
+    <div class="opts">${opts}</div></div>`;
+}
+
+function renderLieQuestion(name, text, idx){
+  const LIE_OPTS=['完全不符合','比较不符合','一般/不确定','比较符合','非常符合'];
+  let opts='';
+  LIE_OPTS.forEach((op,oi)=>{
+    const val=oi+1;
+    opts+=`<label><input type="radio" name="${name}" value="${val}"><span>${val}. ${op}</span></label>`;
+  });
+  return `<div class="q">
+    <div class="qt"><span class="qnum">${idx}</span>${text}</div>
+    <div class="opts">${opts}</div></div>`;
+}
+
+/* ================= 答案与算分 ================= */
+function collectAnswers(){
+  const ans={};
+  const missing=[];
+  let globalIdx=1;
+  const lie={1:null};
+  SCALES.forEach((sc,si)=>{
+    ans[sc.key]=[];
+    sc.questions.forEach(q=>{
+      if(si===0 && q.n===11){
+        const el=document.querySelector('input[name="lie_1"]:checked');
+        if(!el) missing.push(`第 ${globalIdx} 题：为确保您在认真阅读每道题，本题请直接选择「非常符合」。`);
+        else lie[1]=parseInt(el.value,10);
+        globalIdx++;
+      }
+      const el=document.querySelector(`input[name="${sc.key}_${q.n}"]:checked`);
+      if(!el){ missing.push(`第 ${globalIdx} 题：${q.t}`); ans[sc.key].push(null); }
+      else ans[sc.key].push(parseInt(el.value,10));
+      globalIdx++;
+    });
+  });
+  ans._lie=[lie[1], null];
+  return {ans, complete:missing.length===0, missing};
+}
+function reverseScore(v){ return 6-v; }
+function computeScores(ans){
+  const res={};
+  SCALES.forEach(sc=>{
+    let total=0; const perQ=[];
+    sc.questions.forEach((q,i)=>{
+      let v=ans[sc.key][i];
+      if(sc.reverse.includes(q.n)) v=reverseScore(v);
+      perQ.push(v); total+=v;
+    });
+    const lvl=sc.levelOf(total);
+    res[sc.key]={total,perQ,level:lvl,concern:sc.concern(total)};
+  });
+  return res;
+}
+
+/* ================= 提交：校验 + 保存 + 报告 ================= */
+async function submitQuiz(){
+  const basicCheck=checkBasic();
+  if(!basicCheck.ok){
+    showModal('请完善信息','<p>请补全以下基础信息必填项：</p><ul>'+basicCheck.missing.map(x=>'<li>'+x+'</li>').join('')+'</ul>');
+    goBasic();
+    return;
+  }
+  document.getElementById('basicErr').style.display='none';
+
+  const {ans,complete,missing}=collectAnswers();
+  if(!complete){
+    const list=missing.slice(0,8).map(x=>'<li>'+x+'</li>').join('');
+    const more=missing.length>8 ? `<p style="color:var(--sub);font-size:13px;">还有 ${missing.length-8} 道题未作答…</p>` : '';
+    showModal('请完成问卷','<p>您还有以下题未作答，请补全后再提交：</p><ul>'+list+'</ul>'+more);
+    document.getElementById('quizErr').style.display='block';
+    return;
+  }
+  document.getElementById('quizErr').style.display='none';
+
+  const scores=computeScores(ans);
+  const lie=ans._lie||[null];
+  const lieFlag=(lie[0]!==5) ? 1 : 0;
+  currentScores=scores;
+  currentUser=collectBasic();
+  isReportOnly=false;
+  currentLieFlag=lieFlag;
+  showReport(scores);
+  await saveReport(currentUser,ans,scores,lieFlag);
+}
+
+/* ================= 后端保存 ================= */
+async function saveReport(user,answers,scores,lieFlag){
+  if(isReportOnly) return;
+  const submitTime=new Date().toISOString();
+  const payload={
+    lie_flag: lieFlag || 0,
+    user, answers,
+    scores,
+    start_time: startTime || '',
+    submit_time: submitTime,
+    device: collectDevice(),
+    report_html:document.getElementById('step-report').innerHTML
+  };
+  try{
+    await fetch(API_BASE+'/submit',{
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    });
+  }catch(e){
+    // 后端未运行时静默失败，数据已暂存本机浏览器，不影响报告展示
+    const key='report_backup_'+Date.now();
+    localStorage.setItem(key,JSON.stringify(payload));
+  }
+}
+
+/* ================= 报告渲染 ================= */
+const LV_CLASS=['lv-green','lv-yellow','lv-orange','lv-red'];
+const LV_COLOR=['#5b8c5a','#e0a93b','#e07a3e','#d9543b'];
+
+function showReport(scores){
+  let maxSev=0; const weak=[]; const good=[];
+  SCALES.forEach(sc=>{
+    const s=scores[sc.key];
+    if(s.level.severity>maxSev) maxSev=s.level.severity;
+    if(s.level.severity>=2) weak.push(sc);
+    else good.push(sc);
+  });
+
+  renderBanner(maxSev, weak, good, scores);
+  renderOverview(scores);
+  document.getElementById('radar').innerHTML=buildRadar(scores);
+  renderNarrative(scores, weak);
+  renderCourse(scores);
+  renderEnding();
+
+  document.getElementById('reportFoot').innerHTML='感谢您如实填写。本报告仅供自我了解与项目参考，不构成诊断。';
+  showStep('report');
+}
+
+function renderBanner(maxSev, weak, good, scores){
+  const titles=[
+    '亲爱的朋友，你做得很好',
+    '亲爱的朋友，你已经在路上了',
+    '亲爱的朋友，请给自己多一点耐心',
+    '亲爱的朋友，你不必一个人扛着'
+  ];
+  const bodies=[
+    '感谢您迈出了关注自己的第一步。从这份答卷看，您和孩子的关系、您自身的情绪状态以及孩子的抗压能力都处在一个比较良性的状态。请继续保持这份用心。',
+    '感谢您迈出了关注自己的第一步。整体来看，您的家庭状态有不错的基础，同时也有一些值得温柔关注的地方。愿意开始了解，这本身就是很有力量的开始。',
+    '感谢您迈出了关注自己的第一步。这份答卷呈现出一些需要被看见和照顾的地方。请不要担心，这些都是可以被理解和改善的，您已经走在了改变的路上。',
+    '感谢您迈出了关注自己的第一步。这份答卷提醒我们，有些方面可能正在消耗您和孩子的能量。请允许自己寻求支持，主动求助是智慧，也是对孩子最深的爱。'
+  ];
+  const close='愿意认真了解自己和孩子的状态，本身就是一种了不起的爱。请先照顾好自己，再去照亮孩子。';
+
+  let weakText='';
+  if(weak.length){
+    const names=weak.map(sc=>sc.name).join('、');
+    weakText=`其中，「${names}」方面需要您多一些关注。`;
+  }
+
+  const banner=document.getElementById('banner');
+  banner.className='banner '+LV_CLASS[maxSev];
+  banner.innerHTML=`<div class="heart">${maxSev>=3?'💔':'💛'}</div>
+    <div class="btext">
+      <div class="btitle">${titles[maxSev]}</div>
+      <div>${bodies[maxSev]}${weakText}</div>
+      <div class="close">${close}</div>
+    </div>`;
+}
+
+function renderOverview(scores){
+  document.getElementById('overview').innerHTML=SCALES.map(sc=>{
+    const s=scores[sc.key]; const c=LV_COLOR[s.level.severity];
+    return `<div class="scale-box">
+      <div class="sname">${sc.name}</div>
+      <div class="score" style="color:${c}">${s.total}<small> / ${sc.max}</small></div>
+      <div class="tip">${s.level.label}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderNarrative(scores, weak){
+  const resilienceIntro=`<div class="n-block">
+    <h4>💡 什么是心理韧性？</h4>
+    <p>心理韧性（resilience）是指一个人在面对困难、挫折或压力时，能够适应、恢复并从中成长的能力。对于儿童青少年来说，心理韧性并不意味着他们不会难过或害怕，而是意味着他们在跌倒之后能够重新站起来，在困难面前仍然相信自己可以应对。它帮助孩子更好地管理情绪、保持专注、坚持尝试，并从挑战中获得经验和信心。</p>
+  </div>`;
+
+  const blocks=SCALES.map(sc=>{
+    const s=scores[sc.key];
+    return `<div class="n-block">
+      <h4>${sc.name} · ${s.level.label}</h4>
+      <p>${sc.desc(s.total)}</p>
+    </div>`;
+  }).join('');
+
+  document.getElementById('narrative').innerHTML=`<div class="narrative">${blocks}${resilienceIntro}</div>`;
+}
+
+function renderCourse(scores){
+  const s_comm=scores.comm, s_anx=scores.anx, s_res=scores.res;
+  const items=[];
+
+  if(s_anx.level.severity>=2){
+    items.push(`<li><b>关于学业焦虑：</b>建议家长参加情绪调节主题的家长团辅，学习把期待调回合理区间、把松弛感带回家；同时，也可以让孩子参加考前压力缓解、考后心理调节等相关团辅课程，帮助他更从容地面对学业挑战。</li>`);
+  }
+  if(s_comm.level.severity>=2){
+    items.push(`<li><b>关于亲子沟通：</b>建议参加亲子沟通主题的家长团辅，学习更有效的倾听与回应方式，重新走近孩子的内心，让彼此的对话更轻松、更有连接。</li>`);
+  }
+  if(s_res.level.severity>=2){
+    items.push(`<li><b>关于心理韧性：</b>建议让孩子参加儿童心理韧性主题的团辅，帮助他在面对困难时学习情绪调节与问题解决的方法，逐步建立内心的力量。</li>`);
+  }
+
+  const allGood = items.length===0;
+  const intro = allGood
+    ? `从本次评估看，您和孩子的整体状态都比较良好，这非常难得。在这样一个不错的起点上，您依然可以为孩子做一些「加分项」，帮助他走得更稳、更远：`
+    : `根据您的情况，以下几类团辅课程可能会比较有帮助：`;
+
+  const sel = allGood
+    ? `建议让孩子参加<b>儿童社会情感学习（SEL）</b>主题的团辅课程，进一步提升他的心理韧性、人际交往能力与情绪调节能力，让孩子更健康、更善于表达自己。`
+    : `此外，无论当前状态如何，都建议让孩子参加<b>儿童社会情感学习（SEL）</b>主题的团辅课程，持续提升心理韧性、人际交往能力与情绪调节能力，让他更健康、更善于表达。`;
+
+  const list = items.concat([`<li>${sel}</li>`]).join('');
+
+  const html=`<div class="course-block">
+    <h4>🌱 给您的建议</h4>
+    <p>${intro}</p>
+    <ul class="course-list">${list}</ul>
+    <p>大量的实证研究结果显示，系统的心理团辅课程能够帮助家长降低焦虑、提升儿童青少年的心理韧性水平，让家长和孩子沟通更顺畅、彼此更理解；同时，也能帮助孩子在面对困难时更从容、更有方法，增强情绪调节能力和问题解决能力，对其长期发展起到积极的保护作用。</p>
+    <p>如果您愿意，可以联系项目团队报名参加后续的心理团辅活动。您不必一个人面对，我们一起来为孩子的成长营造更有支持性的环境。</p>
+  </div>`;
+
+  document.getElementById('course').innerHTML=html;
+}
+
+function renderEnding(){
+  document.getElementById('ending').innerHTML=`<div class="quote">“养育孩子的路上，您不必完美。您只需要真实、温暖，并且愿意一直陪伴。这就够了。”</div>
+    <div class="sub">每一个愿意认真了解孩子的父母，都在为孩子的人生注入更多光。您已经迈出了最珍贵的一步。</div>`;
+}
+
+function closeReport(){
+  // 直接关闭当前页面（问卷星跳转打开的新标签通常可被关闭）
+  try{ window.open('', '_self'); }catch(e){}
+  window.close();
+}
+
+function renderDimDetails(scores){
+  return SCALES.map(sc=>{
+    const s=scores[sc.key];
+    const bars=sc.questions.map((q,i)=>{
+      const v=s.perQ[i]; const pct=(v/sc.options.length)*100; const col=scoreColor(v,sc.options.length);
+      return `<div class="bar">
+        <div class="blabel"><span>${q.t} <span class="b-dim">[${q.dim}]</span></span>
+          <span class="bval" style="color:${col}">${v}</span></div>
+        <div class="track"><div class="fill" style="width:${pct}%;background:${col}"></div></div>
+      </div>`;
+    }).join('');
+    return `<div class="dim-block">
+      <h4>${sc.name} · 各维度得分
+        <span class="d-score">总分 ${s.total}/${sc.max}</span></h4>
+      ${bars}</div>`;
+  }).join('');
+}
+
+function scoreColor(v,max){
+  const r=v/max;
+  if(r<=0.25) return '#5b8c5a';
+  if(r<=0.5) return '#9bbf6a';
+  if(r<=0.75) return '#e0a93b';
+  if(r<=0.9) return '#e07a3e';
+  return '#d9543b';
+}
+
+/* SVG 雷达图 */
+function buildRadar(scores){
+  const cx=210, cy=170, R=130;
+  const axes=SCALES.map(sc=>({name:sc.name, val:scores[sc.key].concern}));
+  const N=axes.length;
+  if(N<3) return '';
+  const angle=i=>(-90 + i*(360/N))*Math.PI/180;
+  const pt=(i,r)=>[cx+r*Math.cos(angle(i)), cy+r*Math.sin(angle(i))];
+  let grid='';
+  [25,50,75,100].forEach(ring=>{
+    const r=R*ring/100; let pts=[];
+    for(let i=0;i<N;i++){const[x,y]=pt(i,r);pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);}
+    grid+=`<polygon points="${pts.join(' ')}" fill="none" stroke="#ecdfd2" stroke-width="1"/>`;
+  });
+  let lines='';
+  for(let i=0;i<N;i++){const[x,y]=pt(i,R);lines+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#e3d4c5" stroke-width="1"/>`;}
+  let dpts=[];
+  for(let i=0;i<N;i++){const[x,y]=pt(i,R*axes[i].val/100);dpts.push(`${x.toFixed(1)},${y.toFixed(1)}`);}
+  const dataPoly=`<polygon points="${dpts.join(' ')}" fill="url(#radarGrad)" fill-opacity="0.55" stroke="#e07a5f" stroke-width="2"/>`;
+  let dots='';
+  for(let i=0;i<N;i++){const[x,y]=pt(i,R*axes[i].val/100);
+    dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="#e07a5f" stroke="#fff" stroke-width="1.5"/>`;
+    dots+=`<text x="${x.toFixed(1)}" y="${(y-9).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#e07a5f">${axes[i].val}</text>`;
+  }
+  let labels='';
+  for(let i=0;i<N;i++){const[x,y]=pt(i,R+24);
+    labels+=`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#3e332b">${axes[i].name}</text>`;
+  }
+  return `<svg class="radar-svg" viewBox="0 0 420 340" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="radarGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e89b7b"/><stop offset="100%" stop-color="#e07a5f"/>
+    </radialGradient></defs>
+    ${grid}${lines}${dataPoly}${dots}${labels}
+  </svg>`;
+}
+
+/* 报告单页模式（?c=&a=&r=） */
+function readReportParams(){
+  const p=new URLSearchParams(location.search);
+  if(p.has('c')&&p.has('a')&&p.has('r')){
+    const c=parseFloat(p.get('c'));
+    const a=parseFloat(p.get('a'));
+    const r=parseFloat(p.get('r'));
+    if(isNaN(c)||isNaN(a)||isNaN(r)||c<0||a<0||r<0){
+      document.getElementById('step-report').innerHTML=`<div class="param-error">报告参数不完整或格式不正确，请重新从问卷星提交后跳转。</div>`;
+      showStep('report');
+      return true;
+    }
+    const scores={};
+    SCALES.forEach((sc,idx)=>{
+      const total=[c,a,r][idx];
+      scores[sc.key]={total,level:sc.levelOf(total),concern:sc.concern(total)};
+    });
+    currentScores=scores;
+    isReportOnly=true;
+    showReport(scores);
+    return true;
+  }
+  return false;
+}
+
+/* ================= 初始化 ================= */
+renderQuiz();
+initRadioGroups();
+if(!readReportParams()){
+  // 直接进入问卷说明页，点击「开始作答」后填写基础信息
+  showStep('welcome');
+}
+</script>
+</body>
+</html>
