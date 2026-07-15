@@ -17,6 +17,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
+const crypto = require('crypto');
 
 // 轻量 .env 加载（避免引入额外依赖）
 (function loadEnv() {
@@ -36,6 +37,12 @@ const sqlite3 = require('sqlite3').verbose();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const EXPORT_KEY = process.env.EXPORT_KEY || 'admin123';
+
+// 微信公众号网页授权配置（可选）：配置 AppID/AppSecret 后，启用
+// 「微信内自动识别 / 再看报告」能力。未配置时自动退化为纯匿名采集。
+const MP_APPID = process.env.MP_APPID || '';
+const MP_SECRET = process.env.MP_SECRET || '';
+const MP_ENABLED = !!(MP_APPID && MP_SECRET);
 
 const DB_DIR = path.join(__dirname, 'data');
 const DB_PATH = path.join(DB_DIR, 'responses.db');
@@ -64,6 +71,7 @@ db.serialize(() => {
     children_count TEXT, child_age_1 TEXT, child_gender_1 TEXT,
     child_age_2 TEXT, child_gender_2 TEXT, child_age_3 TEXT, child_gender_3 TEXT,
     child_extra TEXT,
+    openid TEXT, wechat_nickname TEXT, wechat_headimgurl TEXT, payload_json TEXT,
     answers TEXT, scores TEXT, report_html TEXT
   )`);
 });
@@ -73,7 +81,8 @@ const EXPECTED_COLS = [
   ['name_code', 'TEXT'], ['phone_last4', 'TEXT'], ['city', 'TEXT'], ['area', 'TEXT'],
   ['lie_flag', 'INTEGER'],
   ['ip', 'TEXT'], ['user_agent', 'TEXT'], ['device_model', 'TEXT'], ['screen', 'TEXT'],
-  ['start_time', 'TEXT'], ['submit_time', 'TEXT'], ['server_time', 'TEXT']
+  ['start_time', 'TEXT'], ['submit_time', 'TEXT'], ['server_time', 'TEXT'],
+  ['openid', 'TEXT'], ['wechat_nickname', 'TEXT'], ['wechat_headimgurl', 'TEXT'], ['payload_json', 'TEXT']
 ];
 db.serialize(() => {
   db.all("PRAGMA table_info(responses)", (err, rows) => {
@@ -85,6 +94,19 @@ db.serialize(() => {
   });
 });
 
+// 微信会话表：授权回调后写入 token ↔ openid/用户信息，前端凭 token 换取报告
+db.run(`CREATE TABLE IF NOT EXISTS sessions (
+  token TEXT PRIMARY KEY,
+  openid TEXT,
+  nickname TEXT,
+  headimgurl TEXT,
+  sex INTEGER,
+  city TEXT,
+  province TEXT,
+  country TEXT,
+  created_at TEXT
+)`);
+
 // 取真实客户端 IP（支持 Nginx 反代 X-Forwarded-For / X-Real-IP）
 function clientIp(req) {
   const xff = (req.headers['x-forwarded-for'] || '').split(',')[0].trim();
@@ -93,9 +115,9 @@ function clientIp(req) {
   return req.socket.remoteAddress || req.ip || '';
 }
 
-/* ============ 提交问卷（纯匿名，无需登录） ============ */
+/* ============ 提交问卷（匿名 / 微信授权均可） ============ */
 app.post('/api/submit', (req, res) => {
-  const { user, answers, scores, report_html, lie_flag, start_time, submit_time, device } = req.body;
+  const { user, answers, scores, report_html, lie_flag, start_time, submit_time, device, token } = req.body;
   if (!user || !answers || !scores) {
     return res.status(400).json({ success: false, message: '缺少必要字段' });
   }
@@ -104,30 +126,47 @@ app.post('/api/submit', (req, res) => {
   const deviceModel = (device && device.device_model) || '';
   const screen = (device && device.screen) || '';
   const serverTime = new Date().toISOString();
+  const isWx = MP_ENABLED && token;
 
-  const fields = ['created_at', 'gender', 'age', 'occupation', 'income', 'contact',
-    'name_code', 'phone_last4', 'city', 'area', 'lie_flag',
-    'ip', 'user_agent', 'device_model', 'screen', 'start_time', 'submit_time', 'server_time',
-    'children_count', 'child_age_1', 'child_gender_1', 'child_age_2', 'child_gender_2',
-    'child_age_3', 'child_gender_3', 'child_extra',
-    'answers', 'scores', 'report_html'];
-  const vals = [
-    serverTime,
-    user.gender || '', user.age || '', user.occupation || '', user.income || '', user.contact || '',
-    user.name_code || '', user.phone_last4 || '', user.city || '', user.area || '',
-    lie_flag ? 1 : 0,
-    ip, ua, deviceModel, screen, start_time || '', submit_time || '', serverTime,
-    user.children_count || '', user.child_age_1 || '', user.child_gender_1 || '',
-    user.child_age_2 || '', user.child_gender_2 || '', user.child_age_3 || '', user.child_gender_3 || '',
-    user.child_extra || '',
-    JSON.stringify(answers || {}), JSON.stringify(scores || {}), report_html || ''
-  ];
-  const cols = fields.join(', ');
-  const sql = `INSERT INTO responses (${cols}) VALUES (${fields.map(() => '?').join(', ')})`;
-  db.run(sql, vals, function (e2) {
-    if (e2) { console.error('保存失败：', e2); return res.status(500).json({ success: false, message: '数据库写入失败' }); }
-    res.json({ success: true, id: this.lastID });
-  });
+  // 若带微信会话令牌，查到 openid / 昵称 / 头像后一并入库
+  const finish = (wx) => {
+    const openid = wx ? (wx.openid || '') : '';
+    const wxNick = wx ? (wx.nickname || '') : '';
+    const wxHead = wx ? (wx.headimgurl || '') : '';
+    const fields = ['created_at', 'gender', 'age', 'occupation', 'income', 'contact',
+      'name_code', 'phone_last4', 'city', 'area', 'lie_flag',
+      'ip', 'user_agent', 'device_model', 'screen', 'start_time', 'submit_time', 'server_time',
+      'children_count', 'child_age_1', 'child_gender_1', 'child_age_2', 'child_gender_2',
+      'child_age_3', 'child_gender_3', 'child_extra',
+      'openid', 'wechat_nickname', 'wechat_headimgurl', 'payload_json',
+      'answers', 'scores', 'report_html'];
+    const vals = [
+      serverTime,
+      user.gender || '', user.age || '', user.occupation || '', user.income || '', user.contact || '',
+      user.name_code || '', user.phone_last4 || '', user.city || '', user.area || '',
+      lie_flag ? 1 : 0,
+      ip, ua, deviceModel, screen, start_time || '', submit_time || '', serverTime,
+      user.children_count || '', user.child_age_1 || '', user.child_gender_1 || '',
+      user.child_age_2 || '', user.child_gender_2 || '', user.child_age_3 || '', user.child_gender_3 || '',
+      user.child_extra || '',
+      openid, wxNick, wxHead, JSON.stringify(req.body),
+      JSON.stringify(answers || {}), JSON.stringify(scores || {}), report_html || ''
+    ];
+    const cols = fields.join(', ');
+    const sql = `INSERT INTO responses (${cols}) VALUES (${fields.map(() => '?').join(', ')})`;
+    db.run(sql, vals, function (e2) {
+      if (e2) { console.error('保存失败：', e2); return res.status(500).json({ success: false, message: '数据库写入失败' }); }
+      res.json({ success: true, id: this.lastID });
+    });
+  };
+
+  if (isWx) {
+    db.get('SELECT openid, nickname, headimgurl FROM sessions WHERE token=?', [token], (e, row) => {
+      finish(row && row.openid ? row : null);
+    });
+  } else {
+    finish(null);
+  }
 });
 
 /* ============ 题项维度备注（仅用于导出 CSV 表头，不在前端显示） ============ */
@@ -169,6 +208,7 @@ app.get('/api/export.csv', (req, res) => {
       'ip', 'device_model', 'user_agent', 'screen',
       'gender', 'age', 'occupation', 'income', 'contact',
       'name_code', 'phone_last4', 'city', 'area', 'lie_flag',
+      'openid', 'wechat_nickname',
       'children_count',
       'child_age_1', 'child_gender_1', 'child_age_2', 'child_gender_2', 'child_age_3', 'child_gender_3', 'child_extra',
       'comm_total', 'anx_total', 'res_total',
@@ -198,6 +238,7 @@ app.get('/api/export.csv', (req, res) => {
         r.ip, r.device_model, r.user_agent, r.screen,
         r.gender, r.age, r.occupation, r.income, r.contact,
         r.name_code, r.phone_last4, r.city, r.area, r.lie_flag,
+        r.openid, r.wechat_nickname,
         r.children_count,
         r.child_age_1, r.child_gender_1, r.child_age_2, r.child_gender_2, r.child_age_3, r.child_gender_3, r.child_extra,
         s.comm ? s.comm.total : '', s.anx ? s.anx.total : '', s.res ? s.res.total : '',
@@ -213,8 +254,88 @@ app.get('/api/export.csv', (req, res) => {
   });
 });
 
+/* ============ 微信公众号网页授权（OAuth2 snsapi_userinfo） ============ */
+// 1) 前端在微信内点击「开始作答」时调用：返回微信授权跳转地址
+app.get('/api/wechat/mp/start', (req, res) => {
+  if (!MP_ENABLED) return res.json({ enabled: false });
+  const redirectUri = `${req.protocol}://${req.get('host')}/api/wechat/mp/callback`;
+  const url = 'https://open.weixin.qq.com/connect/oauth2/authorize'
+    + `?appid=${MP_APPID}`
+    + `&redirect_uri=${encodeURIComponent(redirectUri)}`
+    + '&response_type=code&scope=snsapi_userinfo&state=survey#wechat_redirect';
+  res.json({ enabled: true, url });
+});
+
+// 2) 微信授权回调：用 code 换取 access_token + 用户信息，建会话后回跳首页并带 #token
+app.get('/api/wechat/mp/callback', async (req, res) => {
+  const { code } = req.query;
+  if (!MP_ENABLED || !code) return res.redirect('/index.html');
+  try {
+    const tokenUrl = `https://api.weixin.qq.com/sns/oauth2/access_token`
+      + `?appid=${MP_APPID}&secret=${MP_SECRET}&code=${code}&grant_type=authorization_code`;
+    const r1 = await fetch(tokenUrl).then(r => r.json());
+    if (r1.errcode) throw new Error(r1.errmsg || 'oauth_fail');
+    const { access_token, openid } = r1;
+
+    let info = { nickname: '', headimgurl: '', sex: 0, city: '', province: '', country: '' };
+    try {
+      const u = await fetch(`https://api.weixin.qq.com/sns/userinfo?access_token=${access_token}&openid=${openid}&lang=zh_CN`).then(r => r.json());
+      if (!u.errcode) info = u;
+    } catch (e) { /* 拿不到用户信息也可继续，仅记录 openid */ }
+
+    const token = crypto.randomBytes(16).toString('hex');
+    const created_at = new Date().toISOString();
+    db.run('INSERT OR REPLACE INTO sessions(token, openid, nickname, headimgurl, sex, city, province, country, created_at) '
+      + 'VALUES(?,?,?,?,?,?,?,?,?)',
+      [token, openid, info.nickname || '', info.headimgurl || '', info.sex || 0, info.city || '', info.province || '', info.country || '', created_at]);
+    res.redirect(`/index.html#token=${token}`);
+  } catch (e) {
+    console.error('微信授权失败：', e.message);
+    res.redirect('/index.html');
+  }
+});
+
+// 3) 前端凭 token 换取会话（openid / 昵称 / 头像等）
+app.get('/api/wechat/session', (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(401).json({ success: false });
+  db.get('SELECT openid, nickname, headimgurl, sex, city, province, country FROM sessions WHERE token=?', [token], (e, row) => {
+    if (e || !row) return res.status(401).json({ success: false });
+    res.json({ success: true, wechat: { openid: row.openid, nickname: row.nickname, headimgurl: row.headimgurl, sex: row.sex, city: row.city, province: row.province, country: row.country } });
+  });
+});
+
+// 4) 该微信用户的历史作答列表（用于「再看报告」）
+app.get('/api/wechat/my-reports', (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(401).json({ success: false });
+  db.get('SELECT openid FROM sessions WHERE token=?', [token], (e, row) => {
+    if (e || !row) return res.status(401).json({ success: false });
+    db.all('SELECT id, created_at, wechat_nickname FROM responses WHERE openid=? ORDER BY id DESC', [row.openid], (e2, rows) => {
+      if (e2) return res.status(500).json({ success: false });
+      res.json({ success: true, reports: (rows || []).map(r => ({ id: r.id, created_at: r.created_at, nickname: r.wechat_nickname || '' })) });
+    });
+  });
+});
+
+// 5) 取某次报告的完整数据（仅限本人 openid），前端用现有算分逻辑重渲染
+app.get('/api/wechat/report/:id', (req, res) => {
+  const { token } = req.query;
+  const id = req.params.id;
+  if (!token) return res.status(401).json({ success: false });
+  db.get('SELECT openid FROM sessions WHERE token=?', [token], (e, row) => {
+    if (e || !row) return res.status(401).json({ success: false });
+    db.get('SELECT id, payload_json, wechat_nickname, created_at FROM responses WHERE id=? AND openid=?', [id, row.openid], (e2, r) => {
+      if (e2 || !r) return res.status(404).json({ success: false, message: '未找到该报告' });
+      let payload = {};
+      try { payload = JSON.parse(r.payload_json || '{}'); } catch (e3) { /* ignore */ }
+      res.json({ success: true, payload, nickname: r.wechat_nickname || '', created_at: r.created_at });
+    });
+  });
+});
+
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: '服务正常' });
+  res.json({ success: true, message: '服务正常', mp_enabled: MP_ENABLED });
 });
 
 app.listen(PORT, () => {

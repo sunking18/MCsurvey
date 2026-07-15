@@ -187,6 +187,7 @@
       </div>
       <button class="btn" onclick="startSurvey()">开始作答</button>
       <p class="cover-tip">微信扫描海报二维码即可在手机上作答，约需 5 分钟。</p>
+      <div id="wx-return"></div>
     </div>
   </div>
 
@@ -471,6 +472,11 @@ let isReportOnly = false; // 是否从问卷星跳转进入的简版模式
 let currentLieFlag = 0;    // 测谎题标记：0 正常，1 可疑
 let startTime = null;     // 开始作答时间（点击「开始作答」时记录）
 
+/* 微信网页授权状态 */
+let wechatSession = null; // 微信会话：{openid, nickname, headimgurl, ...}
+let sessionToken = null;  // 微信会话令牌（localStorage 持久，微信内刷新仍识别）
+let priorReports = [];    // 该微信用户的历史报告列表 [{id, created_at, nickname}]
+
 /* ================= 页面切换 ================= */
 function showStep(id){
   document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
@@ -533,6 +539,15 @@ function collectDevice(){
 function startSurvey(){
   // 记录开始作答时间，用于计算答题时长
   startTime=new Date().toISOString();
+  // 微信内打开且尚未授权 → 跳转微信网页授权（snsapi_userinfo）获取用户信息
+  const isWechat = /micromessenger/i.test(navigator.userAgent);
+  if (isWechat && !wechatSession) {
+    fetch(API_BASE + '/wechat/mp/start').then(r => r.json()).then(d => {
+      if (d.enabled && d.url) { window.location.href = d.url; }
+      else { goBasic(); }
+    }).catch(() => goBasic());
+    return;
+  }
   goBasic();
 }
 
@@ -718,6 +733,7 @@ async function submitQuiz(){
   currentLieFlag=lieFlag;
   showReport(scores);
   await saveReport(currentUser,ans,scores,lieFlag);
+  if (wechatSession) loadMyReports(); // 刷新「再看报告」历史
 }
 
 /* ================= 后端保存 ================= */
@@ -731,7 +747,8 @@ async function saveReport(user,answers,scores,lieFlag){
     start_time: startTime || '',
     submit_time: submitTime,
     device: collectDevice(),
-    report_html:document.getElementById('step-report').innerHTML
+    report_html:document.getElementById('step-report').innerHTML,
+    token: sessionToken || ''
   };
   try{
     await fetch(API_BASE+'/submit',{
@@ -962,11 +979,82 @@ function readReportParams(){
   return false;
 }
 
+/* ================= 微信网页授权 + 再看报告 ================= */
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// 初始化：处理 OAuth 回调带回的 #token，或读取本地已存令牌，恢复微信会话
+function initWechat(){
+  const m = location.hash.match(/token=([0-9a-f]+)/);
+  if (m) {
+    sessionToken = m[1];
+    try { localStorage.setItem('survey_wx_token', sessionToken); } catch (e) {}
+    history.replaceState(null, '', location.pathname + location.search);
+  } else if (!sessionToken) {
+    try { sessionToken = localStorage.getItem('survey_wx_token') || null; } catch (e) {}
+  }
+  if (!sessionToken) return;
+  fetch(API_BASE + '/wechat/session?token=' + sessionToken).then(r => r.json()).then(d => {
+    if (d.success) { wechatSession = d.wechat; loadMyReports(); }
+    else { sessionToken = null; try { localStorage.removeItem('survey_wx_token'); } catch (e) {} }
+  }).catch(() => { /* 后端未运行则按匿名处理 */ });
+}
+
+// 拉取该微信用户的历史报告，并渲染首页横幅
+async function loadMyReports(){
+  if (!sessionToken) return;
+  try {
+    const d = await fetch(API_BASE + '/wechat/my-reports?token=' + sessionToken).then(r => r.json());
+    if (d.success) { priorReports = d.reports || []; renderWechatBanner(); }
+  } catch (e) { /* 忽略 */ }
+}
+
+// 首页「已授权 / 查看我的报告」横幅
+function renderWechatBanner(){
+  const box = document.getElementById('wx-return');
+  if (!box) return;
+  let html = '';
+  if (wechatSession && wechatSession.nickname) {
+    html += `<div style="margin-top:14px;background:var(--brand-soft);border:1px solid #f0d8cc;border-radius:12px;padding:12px 14px;font-size:13.5px;color:#7a4a3a;">✅ 已通过微信授权：${escapeHtml(wechatSession.nickname)}</div>`;
+  }
+  if (priorReports.length > 0) {
+    const latest = priorReports[0];
+    const when = (latest.created_at || '').replace('T', ' ').slice(0, 16);
+    html += `<div style="margin-top:12px;background:#edf3ea;border:1px solid #d6e6d2;border-radius:12px;padding:14px 16px;">
+      <div style="font-size:13.5px;color:#1f6b3e;margin-bottom:10px;">您之前已完成 ${priorReports.length} 次作答${when ? '（最近：' + escapeHtml(when) + '）' : ''}，可随时回看报告。</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn" style="padding:10px 22px;font-size:14px;margin-top:0;" onclick="viewMyReport(${latest.id})">查看最近一次报告</button>
+        <button class="btn ghost" onclick="goBasic()">重新作答</button>
+      </div>
+    </div>`;
+  }
+  box.innerHTML = html;
+}
+
+// 再看报告：取回历史作答，用现有算分逻辑重渲染
+async function viewMyReport(id){
+  try {
+    const d = await fetch(API_BASE + '/wechat/report/' + id + '?token=' + sessionToken).then(r => r.json());
+    if (!d.success || !d.payload) { showModal('提示', '未能加载该报告，请重试。'); return; }
+    const payload = d.payload;
+    const scores = payload.scores || computeScores(payload.answers || {});
+    currentScores = scores;
+    currentUser = payload.user || {};
+    currentLieFlag = payload.lie_flag || 0;
+    isReportOnly = false;
+    showReport(scores);
+  } catch (e) {
+    showModal('提示', '加载报告失败，请检查网络后重试。');
+  }
+}
+
 /* ================= 初始化 ================= */
 renderQuiz();
 initRadioGroups();
 if(!readReportParams()){
   // 直接进入问卷说明页，点击「开始作答」后填写基础信息
+  initWechat();
   showStep('welcome');
 }
 </script>
