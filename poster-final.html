@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>问卷二维码海报 — 正式版</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #f5f0eb;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+
+  .poster {
+    width: 420px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 4px 24px rgba(160,120,80,0.12);
+    overflow: hidden;
+  }
+
+  .poster-header {
+    background: linear-gradient(135deg, #e89b7b, #e07a5f);
+    padding: 28px 24px 20px;
+    text-align: center;
+    color: #fff;
+  }
+  .poster-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+  .poster-header p {
+    font-size: 13px;
+    opacity: 0.9;
+  }
+
+  .poster-body {
+    padding: 32px 24px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* 二维码卡片 — 对齐截图样式 */
+  .qr-card {
+    width: 280px;
+    height: 280px;
+    border-radius: 16px;
+    border: 1.5px solid #e8ddd0;
+    background: #fffcf8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 18px;
+    position: relative;
+  }
+  .qr-card canvas, .qr-card img {
+    width: 220px !important;
+    height: 220px !important;
+    border-radius: 8px;
+  }
+
+  .scan-hint {
+    margin-top: 22px;
+    text-align: center;
+  }
+  .scan-hint .main-text {
+    font-size: 19px;
+    font-weight: 700;
+    color: #e07a5f;
+    letter-spacing: 1.5px;
+  }
+  .scan-hint .sub-text {
+    font-size: 12px;
+    color: #b0a098;
+    margin-top: 6px;
+  }
+
+  .poster-footer {
+    background: #fbf5ee;
+    padding: 14px 24px;
+    text-align: center;
+    font-size: 11px;
+    color: #c4b8aa;
+    border-top: 1px solid #efe5da;
+  }
+
+  /* 操作按钮 */
+  .actions {
+    margin-top: 24px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+  .btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #e89b7b, #e07a5f);
+    color: #fff;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(224,122,95,0.3); }
+  .btn-secondary {
+    background: #fff;
+    color: #e07a5f;
+    border: 1.5px solid #e07a5f;
+  }
+  .btn-secondary:hover { background: #fff8f5; }
+</style>
+</head>
+<body>
+
+<div class="poster" id="poster">
+  <div class="poster-header">
+    <h1>职工子女心理健康评估</h1>
+    <p>亲子沟通 · 学业焦虑 · 心理韧性</p>
+  </div>
+  <div class="poster-body">
+    <!-- 二维码卡片（对齐截图样式） -->
+    <div class="qr-card" id="qrCard">
+      <canvas id="qrcode"></canvas>
+    </div>
+    <div class="scan-hint">
+      <div class="main-text">微信扫码，立即开始作答</div>
+      <div class="sub-text">约需 5 分钟 · 匿名填写 · 结果即时可见</div>
+    </div>
+  </div>
+  <div class="poster-footer">
+    河北唠里唠叨心理咨询有限公司 · xunxinli.com
+  </div>
+</div>
+
+<div class="actions">
+  <button class="btn btn-primary" onclick="downloadPNG()">📥 下载海报 PNG</button>
+  <button class="btn btn-secondary" onclick="window.open('https://xunxinli.com','_blank')">🌐 打开问卷</button>
+</div>
+
+<script src="assets/qrcode.min.js"></script>
+<script src="assets/html2canvas.min.js"></script>
+<script>
+// 固定地址：正式部署域名
+const SURVEY_URL = 'https://xunxinli.com';
+
+// 生成二维码
+new QRCode(document.getElementById('qrcode'), {
+  text: SURVEY_URL,
+  width: 220,
+  height: 220,
+  colorDark: '#3e332b',
+  colorLight: '#ffffff',
+  correctLevel: QRCode.CorrectLevel.M
+});
+
+// 下载海报 PNG
+async function downloadPNG() {
+  const btn = event.target;
+  const origText = btn.textContent;
+  btn.textContent = '⏳ 生成中...';
+  btn.disabled = true;
+
+  try {
+    const canvas = await html2canvas(document.getElementById('poster'), {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false
+    });
+    const link = document.createElement('a');
+    link.download = `心理评估问卷_二维码_${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (e) {
+    alert('生成失败：' + e.message);
+  } finally {
+    btn.textContent = origText;
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

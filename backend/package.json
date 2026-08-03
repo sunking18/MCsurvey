@@ -1,7 +1,7 @@
 {
   "name": "questionnaire-backend",
   "version": "1.0.0",
-  "description": "职工子女心理健康问卷后端：存储基本信息、问卷答案与报告数据",
+  "description": "职工子女心理健康问卷后端：存储基本信息、问卷答案与报告数据（MySQL 版）",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -10,6 +10,6 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "sqlite3": "^5.1.7"
+    "mysql2": "^3.9.0"
   }
 }

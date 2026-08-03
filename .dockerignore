@@ -1,0 +1,9 @@
+node_modules
+data
+*.db
+.env
+.workbuddy
+.DS_Store
+docker/
+*.md
+wenjuanxing_import.txt
