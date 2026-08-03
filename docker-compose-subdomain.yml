@@ -54,7 +54,7 @@ services:
       - ./survey/poster.html:/app/poster.html:ro
       - ./survey/admin.html:/app/admin.html:ro
       - ./survey/assets:/app/assets:ro
-      - ./MP_verify_b1s8XUY2r8hgdUhB.txt:/app/MP_verify_b1s8XUY2r8hgdUhB.txt:ro
+      - ./survey/MP_verify_b1s8XUY2r8hgdUhB.txt:/app/MP_verify_b1s8XUY2r8hgdUhB.txt:ro
     networks:
       - app-net
 
