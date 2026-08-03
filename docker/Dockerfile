@@ -19,9 +19,9 @@ COPY --from=builder /app/node_modules ./node_modules
 # 复制后端代码
 COPY backend/ ./
 
-# 前端静态文件（Nginx 会直接 serve，但后端也需要能找到根目录文件）
-COPY index.html poster.html admin.html MP_verify_*.txt ../
-COPY assets/ ../assets/
+# 前端静态文件（index.html / poster.html / admin.html / assets / MP_verify_*.txt）
+# 不在构建期 COPY：运行时由 docker-compose 的 bind mount 从 ../survey 与
+# ../MP_verify_*.txt 直接挂进容器（/app/...），改文件无需重新 build。
 
 EXPOSE 3000
 

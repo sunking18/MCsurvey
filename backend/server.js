@@ -50,6 +50,8 @@ const MP_APPID = process.env.MP_APPID || '';
 const MP_SECRET = process.env.MP_SECRET || '';
 const MP_ENABLED = !!(MP_APPID && MP_SECRET);
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
+// 问卷前端挂载位置。默认 /survey 子目录；若部署在独立子域（如 survey.xunxinli.com），设为空字符串即根路径。
+const SURVEY_PATH = (process.env.SURVEY_PATH !== undefined ? process.env.SURVEY_PATH : '/survey').replace(/\/+$/, '');
 
 // MySQL 配置
 const MYSQL_HOST = process.env.MYSQL_HOST || 'localhost';
@@ -74,7 +76,8 @@ async function initPool() {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    charset: 'utf8mb4'
+    charset: 'utf8mb4',
+    dateStrings: true
   });
 
   // 等待连接就绪 + 自动建表
@@ -95,7 +98,7 @@ async function initPool() {
         child_age_2 TEXT, child_gender_2 TEXT,
         child_age_3 TEXT, child_gender_3 TEXT,
         child_extra TEXT,
-        openid TEXT, wechat_nickname TEXT, wechat_headimgurl TEXT,
+        openid VARCHAR(64), wechat_nickname TEXT, wechat_headimgurl TEXT,
         payload_json JSON,
         answers JSON, scores JSON, report_html TEXT,
         INDEX idx_openid (openid),
@@ -224,15 +227,47 @@ app.post('/api/submit', async (req, res) => {
   }
 });
 
-// ========== 题项维度备注（CSV 表头用） ==========
+// ========== 题项维度备注 + 选项标签（CSV 表头用） ==========
 const Q_META = [
-  '开放尊重', '规则协商', '主动询问', '控制式沟通', '开放表达', '引导讨论',
-  '孩子表达意愿', '情绪升级', '批评优先', '情感沟通', '沟通安全感', '倾听接纳',
-  '学习状态担忧', '父母能力焦虑', '教育资源焦虑', '考试焦虑', '焦虑外化', '考试焦虑',
-  '成绩焦虑', '教育投入焦虑', '父母无力感', '学校环境焦虑', '学习执行担忧', '学习自主性担忧',
-  '适应变化', '应对困难', '情绪调节', '成长感', '恢复力', '自我效能',
-  '压力下专注', '坚持性', '勇于面对', '情绪平复'
+  { dim: '开放尊重',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
+  { dim: '规则协商',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
+  { dim: '主动询问',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
+  { dim: '控制式沟通',   opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
+  { dim: '开放表达',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
+  { dim: '引导讨论',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
+  { dim: '孩子表达意愿', opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
+  { dim: '情绪升级',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
+  { dim: '批评优先',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
+  { dim: '情感沟通',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
+  { dim: '沟通安全感',   opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
+  { dim: '倾听接纳',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
+  { dim: '学习状态担忧', opts: ['从不','有时','一般','经常','总是'] },
+  { dim: '父母能力焦虑', opts: ['从不','有时','一般','经常','总是'] },
+  { dim: '教育资源焦虑', opts: ['从不','有时','一般','经常','总是'] },
+  { dim: '考试焦虑',     opts: ['从不','有时','一般','经常','总是'] },
+  { dim: '焦虑外化',     opts: ['从不','有时','一般','经常','总是'] },
+  { dim: '考试焦虑',     opts: ['从不','有时','一般','经常','总是'] },
+  { dim: '成绩焦虑',     opts: ['从不','有时','一般','经常','总是'] },
+  { dim: '教育投入焦虑', opts: ['从不','有时','一般','经常','总是'] },
+  { dim: '父母无力感',   opts: ['从不','有时','一般','经常','总是'] },
+  { dim: '学校环境焦虑', opts: ['从不','有时','一般','经常','总是'] },
+  { dim: '学习执行担忧', opts: ['从不','有时','一般','经常','总是'] },
+  { dim: '学习自主性担忧',opts:['从不','有时','一般','经常','总是'] },
+  { dim: '适应变化',     opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
+  { dim: '应对困难',     opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
+  { dim: '情绪调节',     opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
+  { dim: '成长感',       opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
+  { dim: '恢复力',       opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
+  { dim: '自我效能',     opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
+  { dim: '压力下专注',   opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
+  { dim: '坚持性',       opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
+  { dim: '勇于面对',     opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
+  { dim: '情绪平复',     opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] }
 ];
+
+// 维度名称映射
+const DIM_NAMES = { comm: '亲子沟通情况', anx: '学业焦虑', res: '心理韧性' };
+const SCALE_KEYS = ['comm', 'anx', 'res'];
 
 // ========== 导出 JSON ============
 app.get('/api/export', async (req, res) => {
@@ -245,7 +280,25 @@ app.get('/api/export', async (req, res) => {
   }
 });
 
-// ========== 导出 CSV ============
+// ========== 从 answers JSON 中提取每题分数 ==========
+function extractAnswers(answersJson) {
+  let a = {};
+  try { a = JSON.parse(answersJson || '{}'); } catch (e) { a = {}; }
+  const result = [];
+  // 按 comm(12) → anx(12) → res(10) 顺序展平为 34 题
+  for (const k of SCALE_KEYS) {
+    const arr = Array.isArray(a[k]) ? a[k] : [];
+    // 每个值应该是 1-5 的整数
+    for (let i = 0; i < arr.length; i++) {
+      const v = parseInt(arr[i], 10);
+      result.push((isNaN(v) || v < 1 || v > 5) ? '' : v);
+    }
+  }
+  while (result.length < 34) result.push('');
+  return result;
+}
+
+// ========== 导出 CSV（修复版：正确解析每题分数+选项文本） ============
 app.get('/api/export.csv', async (req, res) => {
   if (req.query.key !== EXPORT_KEY) return res.status(401).send('密钥错误');
   try {
@@ -256,34 +309,20 @@ app.get('/api/export.csv', async (req, res) => {
       const s = String(v);
       return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
     };
-    const qHeaders = Q_META.map((dim, i) => `q${i + 1}（${dim}）`);
+    // 表头：q 列显示「维度名」
+    const qHeaders = Q_META.map((q, i) => `q${i + 1}（${q.dim}）`);
     const headers = [
-      'id', 'server_time', 'submit_time', 'start_time', '答题时长(秒)',
-      'ip', 'device_model', 'user_agent', 'screen',
-      'gender', 'age', 'occupation', 'income', 'contact',
-      'name_code', 'phone_last4', 'city', 'area', 'lie_flag',
-      'openid', 'wechat_nickname',
-      'children_count',
-      'child_age_1', 'child_gender_1', 'child_age_2', 'child_gender_2', 'child_age_3', 'child_gender_3', 'child_extra',
-      'comm_total', 'anx_total', 'res_total',
-      ...qHeaders, 'lie_1（注意力检测题）', 'report_html'
+      'id', '提交时间', '答题时长(秒)',
+      '性别', '年龄', '所在城市',
+      '姓名缩写', '手机后四位', '子女数',
+      '沟通总分', '焦虑总分', '韧性总分',
+      ...qHeaders
     ];
     const lines = [headers.map(esc).join(',')];
 
     for (const r of rows) {
-      let a = {};
-      try { a = JSON.parse(r.answers || '{}'); } catch (e) {}
-      let s = {};
-      try { s = JSON.parse(r.scores || '{}'); } catch (e) {}
-
-      const flat = [];
-      ['comm', 'anx', 'res'].forEach(k => {
-        const arr = (a[k] && a[k].perQ) ? a[k].perQ : (Array.isArray(a[k]) ? a[k] : []);
-        arr.forEach(v => flat.push(v));
-      });
-      while (flat.length < 34) flat.push('');
-
-      const lie = Array.isArray(a._lie) ? a._lie : [null];
+      const scores = extractScores(r.scores);
+      const qVals = extractAnswers(r.answers);
 
       let dur = '';
       if (r.start_time && r.submit_time) {
@@ -293,27 +332,163 @@ app.get('/api/export.csv', async (req, res) => {
       }
 
       const row = [
-        r.id, r.server_time, r.submit_time, r.start_time, dur,
-        r.ip, r.device_model, r.user_agent, r.screen,
-        r.gender, r.age, r.occupation, r.income, r.contact,
-        r.name_code, r.phone_last4, r.city, r.area, r.lie_flag,
-        r.openid, r.wechat_nickname,
-        r.children_count,
-        r.child_age_1, r.child_gender_1, r.child_age_2, r.child_gender_2,
-        r.child_age_3, r.child_gender_3, r.child_extra,
-        s.comm ? s.comm.total : '', s.anx ? s.anx.total : '', s.res ? s.res.total : '',
-        ...flat,
-        lie[0] !== null && lie[0] !== undefined ? lie[0] : '',
-        (r.report_html || '').replace(/\s+/g, ' ')
+        r.id,
+        (r.server_time || r.created_at || '').replace(/T/, ' ').slice(0, 19),
+        dur,
+        r.gender || '', r.age || '', r.city || '',
+        r.name_code || '', r.phone_last4 || '', r.children_count || '',
+        scores.comm || '', scores.anx || '', scores.res || '',
+        ...qVals
       ];
       lines.push(row.map(esc).join(','));
     }
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="responses_${Date.now()}.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="survey_responses_${new Date().toISOString().slice(0,10)}.csv"`);
     res.send('\uFEFF' + lines.join('\n'));
   } catch (e) {
-    res.status(500).send('查询失败');
+    console.error('CSV导出失败:', e);
+    res.status(500).send('导出失败');
+  }
+});
+
+// ========== 从 scores JSON 提取各维度总分 ==========
+function extractScores(scoresJson) {
+  let s = {};
+  try { s = JSON.parse(scoresJson || '{}'); } catch (e) { s = {}; }
+  return {
+    comm: (s.comm && s.comm.total) ? s.comm.total : '',
+    anx:  (s.anx && s.anx.total) ? s.anx.total : '',
+    res:  (s.res && s.res.total) ? s.res.total : ''
+  };
+}
+
+// ========== 统计分析 API ==========
+app.get('/api/stats', async (req, res) => {
+  if (req.query.key !== EXPORT_KEY) return res.status(401).json({ success: false, message: '密钥错误' });
+  try {
+    const [rows] = await pool.execute(
+      `SELECT id, created_at, gender, age, city, children_count, answers, scores, start_time, submit_time
+       FROM responses ORDER BY id DESC`
+    );
+
+    const total = rows.length;
+    if (total === 0) {
+      return res.json({
+        success: true,
+        overview: { total: 0, today: 0, avgDuration: 0 },
+        dimensions: {},
+        demographics: { gender: {}, age: {}, city: {} },
+        dailyTrend: [],
+        qStats: []
+      });
+    }
+
+    // 今日新增
+    const _cn = new Date();
+    const todayStr = new Date(_cn.getTime() + (_cn.getTimezoneOffset() + 480) * 60000).toISOString().slice(0, 10);
+    const todayCount = rows.filter(r => (r.created_at || '').slice(0, 10) === todayStr).length;
+
+    // 维度统计
+    const dimData = { comm: [], anx: [], res: [] };
+    let totalDur = 0, durCnt = 0;
+
+    // 每题统计（34题）
+    const qArrays = Array.from({ length: 34 }, () => []);
+    // 人口统计
+    const genderMap = {}, ageMap = {}, cityMap = {};
+    // 每日趋势
+    const dayMap = {};
+
+    for (const r of rows) {
+      // 维度分
+      let s = {};
+      try { s = JSON.parse(r.scores || '{}'); } catch (e) {}
+      for (const k of SCALE_KEYS) {
+        if (s[k] && typeof s[k].total === 'number') dimData[k].push(s[k].total);
+      }
+
+      // 答题时长
+      if (r.start_time && r.submit_time) {
+        const t0 = new Date(r.start_time).getTime();
+        const t1 = new Date(r.submit_time).getTime();
+        if (!isNaN(t0) && !isNaN(t1) && t1 >= t0) { totalDur += (t1 - t0) / 1000; durCnt++; }
+      }
+
+      // 每题分数
+      const qVals = extractAnswers(r.answers);
+      qVals.forEach((v, i) => { if (v !== '') qArrays[i].push(v); });
+
+      // 人口统计
+      const g = (r.gender || '未填').trim(); genderMap[g] = (genderMap[g] || 0) + 1;
+      const a = (r.age || '未填').trim();   ageMap[a] = (ageMap[a] || 0) + 1;
+      const c = (r.city || '未填').trim();   cityMap[c] = (cityMap[c] || 0) + 1;
+
+      // 每日趋势
+      const d = (r.created_at || '').slice(0, 10); if (d) dayMap[d] = (dayMap[d] || 0) + 1;
+    }
+
+    // 维度聚合
+    const dimensions = {};
+    for (const k of SCALE_KEYS) {
+      const arr = dimData[k];
+      if (arr.length === 0) { dimensions[k] = { name: DIM_NAMES[k], count: 0, avg: 0, min: 0, max: 0, distribution: {} }; continue; }
+      const sum = arr.reduce((a, b) => a + b, 0);
+      const avg = Math.round(sum / arr.length * 10) / 10;
+      dimensions[k] = {
+        name: DIM_NAMES[k],
+        count: arr.length,
+        avg, min: Math.min(...arr), max: Math.max(...arr),
+        distribution: {}
+      };
+      // 分档统计
+      const levels = k === 'anx'
+        ? [{ label: '不怎么焦虑', max: 27 }, { label: '一般', max: 35 }, { label: '较强', max: 43 }, { label: '很强', max: 999 }]
+        : (k === 'comm'
+          ? [{ label: '优秀', min: 45 }, { label: '良好', min: 37 }, { label: '一般', min: 32 }, { label: '不容乐观', min: 0 }]
+          : [{ label: '优秀', min: 38 }, { label: '良好', min: 31 }, { label: '一般', min: 25 }, { label: '需关注', min: 0 }]);
+      for (const v of arr) {
+        let lbl = '';
+        if (k === 'anx') {
+          lbl = v <= 27 ? '不怎么焦虑' : v <= 35 ? '一般' : v <= 43 ? '较强' : '很强';
+        } else if (k === 'comm') {
+          lbl = v >= 45 ? '优秀' : v >= 37 ? '良好' : v >= 32 ? '一般' : '不容乐观';
+        } else {
+          lbl = v >= 38 ? '优秀' : v >= 31 ? '良好' : v >= 25 ? '一般' : '需关注';
+        }
+        dimensions[k].distribution[lbl] = (dimensions[k].distribution[lbl] || 0) + 1;
+      }
+    }
+
+    // 每题平均分
+    const qStats = qArrays.map((arr, i) => ({
+      q: i + 1,
+      dim: Q_META[i].dim,
+      count: arr.length,
+      avg: arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length * 100) / 100 : 0,
+      opts: Q_META[i].opts
+    }));
+
+    // 每日趋势（最近30天，倒序）
+    const dailyTrend = Object.entries(dayMap)
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-30);
+
+    res.json({
+      success: true,
+      overview: {
+        total, today: todayCount,
+        avgDuration: durCnt > 0 ? Math.round(totalDur / durCnt) : 0
+      },
+      dimensions,
+      demographics: { gender: genderMap, age: ageMap, city: cityMap },
+      dailyTrend,
+      qStats
+    });
+  } catch (e) {
+    console.error('统计失败:', e);
+    res.status(500).json({ success: false, message: '统计失败' });
   }
 });
 
@@ -335,7 +510,7 @@ app.get('/api/wechat/mp/start', (req, res) => {
 // 2) 微信授权回调：用 code 换取 access_token + 用户信息，建会话后回跳首页带 #token
 app.get('/api/wechat/mp/callback', async (req, res) => {
   const { code } = req.query;
-  if (!MP_ENABLED || !code) return res.redirect('/index.html');
+  if (!MP_ENABLED || !code) return res.redirect(`${SURVEY_PATH}/index.html`);
   try {
     const tokenUrl = `https://api.weixin.qq.com/sns/oauth2/access_token`
       + `?appid=${MP_APPID}&secret=${MP_SECRET}&code=${code}&grant_type=authorization_code`;
@@ -354,10 +529,10 @@ app.get('/api/wechat/mp/callback', async (req, res) => {
       'INSERT INTO sessions(token, openid, nickname, headimgurl, sex, city, province, country) VALUES(?,?,?,?,?,?,?,?)',
       [sessionToken, openid, info.nickname || '', info.headimgurl || '', info.sex || 0, info.city || '', info.province || '', info.country || '']
     );
-    res.redirect(`/index.html#token=${sessionToken}`);
+    res.redirect(`${SURVEY_PATH}/index.html#token=${sessionToken}`);
   } catch (e) {
     console.error('微信授权失败：', e.message);
-    res.redirect('/index.html');
+    res.redirect(`${SURVEY_PATH}/index.html`);
   }
 });
 

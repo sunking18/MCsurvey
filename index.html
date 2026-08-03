@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>亲子心理健康问卷</title>
+<title>亲子沟通情况调查</title>
 <style>
   :root{
     /* 暖阳·生命力配色：珊瑚暖橙主色 + 暖绿生命力点缀 + 暖米背景 */
@@ -174,20 +174,16 @@
   <!-- 步骤 0：欢迎页 -->
   <div id="step-welcome" class="step active">
     <div class="welcome-card">
-      <h1>亲子心理健康问卷</h1>
+      <h1>亲子沟通情况调查</h1>
       <div class="intro-card">
         <span class="label">问卷说明</span>
-        <p>尊敬的家长朋友：</p>
-        <p>您好！感谢您对本次职工子女心理健康项目的支持，更感谢您在百忙之中愿意抽出 5 分钟左右参与本次调研。</p>
-        <p>本问卷旨在了解您作为父母/主要照料者，对孩子成长与家庭日常的一些观察与感受。答案无对错之分，请根据您的实际情况选择最合适的选项。</p>
+        <p>感谢您在百忙之中愿意抽出 5 分钟左右参与本次调研，本问卷旨在了解您作为父母/主要照料者，对孩子成长与家庭日常的一些观察与感受。答案无对错之分，请根据您的实际情况选择最合适的选项。</p>
         <p>您的参与完全自愿，您的选择将严格保密，仅供本项目研究使用，请放心作答。祝您工作顺利，生活愉快！</p>
         <div class="consent-box">
-          <b>知情同意：</b>本次作答将收集您填写的基础信息，以及设备型号、网络地址、答题时间等系统数据，仅用于本项目研究与服务优化，严格保密。点击「开始作答」即表示您已知晓并同意上述说明。
+          本次作答将收集您填写的基础信息，仅用于本项目研究与服务优化，严格保密。点击「开始作答」即表示您已知晓并同意上述说明。
         </div>
       </div>
       <button class="btn" onclick="startSurvey()">开始作答</button>
-      <p class="cover-tip">微信扫描海报二维码即可在手机上作答，约需 5 分钟。</p>
-      <div id="wx-return"></div>
     </div>
   </div>
 
@@ -280,10 +276,6 @@
                 <option>其他（请于备注说明）</option>
               </select>
             </div>
-            <div class="field">
-              <label>社区 / 厂区<span class="req">*</span></label>
-              <input type="text" name="area" placeholder="如：XX社区 / XX厂区">
-            </div>
           </div>
         </div>
 
@@ -297,20 +289,20 @@
     </section>
   </div>
 
-  <!-- 步骤 2：问卷 -->
+  <!-- 步骤 2：问卷（分页） -->
   <div id="step-quiz" class="step">
     <div class="step-header">步骤 <b>2 / 3</b>：问卷填写</div>
-    <div class="progress"><div class="fill" style="width:66%"></div></div>
+    <div class="progress"><div class="fill" id="quizProgress" style="width:33%"></div></div>
     <section class="card">
-      <div class="sec-title">本部分包含 35 个题项</div>
-      <div class="sec-sub">请仔细阅读每一项目，并根据您的实际情况选择最符合您的评分。题目无对错之分。</div>
+      <div id="quizHeader">
+        <div class="sec-title">问卷部分</div>
+      </div>
       <form id="quizForm">
-        <!-- 题目由 JS 渲染 -->
+        <!-- 题目由 JS 分页渲染 -->
       </form>
-      <div class="err" id="quizErr">请先完成所有题目再提交。</div>
-      <div class="btn-row">
-        <button class="btn ghost" onclick="goBasic()">返回修改信息</button>
-        <button class="btn" onclick="submitQuiz()">提交并查看报告</button>
+      <div class="err" id="quizErr">请先完成当前部分所有题目再继续。</div>
+      <div class="btn-row" id="quizNav">
+        <!-- 导航按钮由 JS 动态生成 -->
       </div>
     </section>
   </div>
@@ -340,7 +332,6 @@
 
       <div class="report-foot" id="reportFoot"></div>
       <div class="save-status" id="saveStatus"></div>
-      <div class="disclaimer">说明：以上分层为项目初版解释，用于筛查参考；正式推广前建议基于试点样本校准。如报告提示「较高关注」，建议前往专业机构进一步评估。</div>
 
       <div class="report-actions">
         <button class="btn ghost" onclick="closeReport()">✕ 关闭</button>
@@ -365,7 +356,7 @@
 const SCALES = [
   {
     key:'comm', name:'亲子沟通情况', short:'沟通', count:12, min:12, max:60, higherBetter:true,
-    intro:'请仔细阅读以下每一项目，并根据您的实际情况选择一个最符合您的评分，表明这句话对您而言的正确程度。题目没有对错之分，请根据您的真实感受作答。',
+    intro:'接下来想了解一下您和孩子在日常交流中的一些感受。请认真阅读每道题，根据您的真实感受作答，答案没有对错。',
     options:['完全不符合','比较不符合','一般','比较符合','非常符合'],
     reverse:[4,8,9],
     questions:[
@@ -398,7 +389,7 @@ const SCALES = [
   },
   {
     key:'anx', name:'学业焦虑', short:'焦虑', count:12, min:12, max:60, higherBetter:false,
-    intro:'请仔细阅读以下每一项目，并根据您的实际情况选择一个最符合您的评分，表明这句话对您而言的正确程度。题目没有对错之分，请根据您的真实感受作答。',
+    intro:'接下来想了解一下您在陪伴孩子成长过程中的一些心情和感受。请认真阅读每道题，根据您的真实感受作答，答案没有对错。',
     options:['从不','有时','一般','经常','总是'],
     reverse:[],
     questions:[
@@ -431,7 +422,7 @@ const SCALES = [
   },
   {
     key:'res', name:'心理韧性', short:'韧性', count:10, min:10, max:50, higherBetter:true,
-    intro:'请仔细阅读以下每一项目，并根据您的实际情况选择一个最符合您的评分，表明这句话对您而言的正确程度。题目没有对错之分，请根据您的真实感受作答。',
+    intro:'接下来想了解一下您观察到的孩子在面对生活变化或困难时的一些表现。请认真阅读每道题，根据您的真实感受作答，答案没有对错。',
     options:['从不这样','很少这样','有时这样','经常这样','总是这样'],
     reverse:[],
     questions:[
@@ -486,9 +477,12 @@ function showStep(id){
 function goWelcome(){ showStep('welcome'); }
 function goBasic(){ showStep('basic'); }
 function goQuiz(){
-  const {ok,missing}=checkBasic();
+  const {ok,missing,errors}=checkBasic();
   if(!ok){
-    showModal('请完善信息','<p>请补全以下必填项后再继续：</p><ul>'+missing.map(x=>'<li>'+x+'</li>').join('')+'</ul>');
+    let html='<p>请补全以下必填项：</p>';
+    if(missing.length) html+='<ul>'+missing.map(x=>'<li>'+x+'</li>').join('')+'</ul>';
+    if(errors.length) html+='<p style="color:var(--red);margin-top:8px;">以下信息格式有误：</p><ul style="color:var(--red);">'+errors.map(x=>'<li>'+x+'</li>').join('')+'</ul>';
+    showModal('请完善信息',html);
     return;
   }
   document.getElementById('basicErr').style.display='none';
@@ -498,15 +492,32 @@ function goQuiz(){
 function checkBasic(){
   const b=collectBasic();
   const missing=[];
+  const errors=[];
   if(!b.gender) missing.push('您的性别');
   if(!b.age) missing.push('您的年龄');
   if(!b.children_count) missing.push('您有几个子女');
   // 身份识别字段：所有人均需填写
   if(!b.name_code) missing.push('姓名首字母缩写');
+  else if(!/^[A-Za-z]{2,8}$/.test(b.name_code)) errors.push('姓名首字母缩写应为 2-8 位英文字母（如：ZW）');
   if(!b.phone_last4) missing.push('手机号后四位');
+  else if(!/^\d{4}$/.test(b.phone_last4)) errors.push('手机号后四位应为 4 位数字');
   if(!b.city) missing.push('所在城市');
-  if(!b.area) missing.push('社区 / 厂区');
-  return {ok:missing.length===0, missing};
+  // 联系方式选填，但若填了需校验格式（手机号支持 +86 前缀及空格，邮箱按标准格式）
+  if(b.contact){
+    const c=b.contact.replace(/\s/g,''); // 去空格，避免用户误输空格被拒
+    if(!/^(\+?86)?1[3-9]\d{9}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(c))
+      errors.push('联系方式格式不正确，请填写有效手机号或邮箱');
+  }
+  // 子女年龄范围校验
+  const childCount = parseInt(b.children_count || '0', 10);
+  for(let i=1; i<=childCount && i<=4; i++){
+    const ageVal = b['child_age_'+i];
+    if(ageVal !== undefined && ageVal !== ''){
+      const age = parseInt(ageVal, 10);
+      if(isNaN(age) || age < 3 || age > 22) errors.push(`子女${i}年龄应在 3-22 岁之间`);
+    }
+  }
+  return {ok:missing.length===0 && errors.length===0, missing, errors};
 }
 function validateBasic(){ return checkBasic().ok; }
 
@@ -539,15 +550,6 @@ function collectDevice(){
 function startSurvey(){
   // 记录开始作答时间，用于计算答题时长
   startTime=new Date().toISOString();
-  // 微信内打开且尚未授权 → 跳转微信网页授权（snsapi_userinfo）获取用户信息
-  const isWechat = /micromessenger/i.test(navigator.userAgent);
-  if (isWechat && !wechatSession) {
-    fetch(API_BASE + '/wechat/mp/start').then(r => r.json()).then(d => {
-      if (d.enabled && d.url) { window.location.href = d.url; }
-      else { goBasic(); }
-    }).catch(() => goBasic());
-    return;
-  }
   goBasic();
 }
 
@@ -606,38 +608,168 @@ function renderChildrenFields(){
   });
 }
 
-/* ================= 渲染问卷（按量表分块，带指导语） ================= */
-function renderQuiz(){
-  const form=document.getElementById('quizForm');
-  let html='';
-  let globalIdx=1;
-  SCALES.forEach((sc,si)=>{
-    const partNames=['第一部分','第二部分','第三部分'];
-    html+=`<div class="scale-block">
-      <div class="scale-intro">
-        <span class="part-label">${partNames[si]}</span>
-        <p>${sc.intro}</p>
-      </div>
-      <div class="scale-title">${sc.name}</div>`;
-    sc.questions.forEach((q)=>{
-      // 注意力检测题：嵌入第一部分倒数第二题（Q11）之前，不单独显示检测区块与维度标签
-      if(si===0 && q.n===11){
-        html+=renderLieQuestion('lie_1', '为确保您在认真阅读每道题，本题请直接选择「非常符合」。', globalIdx);
-        globalIdx++;
-      }
-      html+=renderQuestion(sc, q, globalIdx);
-      globalIdx++;
-    });
-    html+=`</div>`;
+/* ================= 渲染问卷（分页模式：每部分一页） ================= */
+let currentPart = 0; // 当前显示的量表索引 (0/1/2)
+const partNames = ['第一部分','第二部分','第三部分'];
+let savedPartAnswers = {}; // 缓存每部分已答题目，分页切换时不丢失
+
+function saveCurrentPartAnswers(){
+  /* 将当前页面已选的 radio 值缓存到 savedPartAnswers */
+  const sc = SCALES[currentPart];
+  if(!savedPartAnswers[sc.key]) savedPartAnswers[sc.key] = {};
+  sc.questions.forEach(q => {
+    const el = document.querySelector(`input[name="${sc.key}_${q.n}"]:checked`);
+    if(el) savedPartAnswers[sc.key][q.n] = parseInt(el.value, 10);
   });
-  form.innerHTML=html;
-  form.addEventListener('change',e=>{
-    if(e.target.type==='radio'){
-      const grp=e.target.closest('.opts');
-      grp.querySelectorAll('label').forEach(l=>l.classList.remove('checked'));
+  // 测谎题
+  if(currentPart === 0){
+    const lieEl = document.querySelector('input[name="lie_1"]:checked');
+    if(lieEl) savedPartAnswers['_lie_1'] = parseInt(lieEl.value, 10);
+  }
+}
+
+function restoreCurrentPartAnswers(){
+  /* 从缓存恢复当前页面的选中状态 */
+  const sc = SCALES[currentPart];
+  const partData = savedPartAnswers[sc.key] || {};
+  sc.questions.forEach(q => {
+    const val = partData[q.n];
+    if(val){
+      const el = document.querySelector(`input[name="${sc.key}_${q.n}"][value="${val}"]`);
+      if(el){ el.checked = true; el.closest('label')?.classList.add('checked'); }
+    }
+  });
+  if(currentPart === 0){
+    const lieVal = savedPartAnswers['_lie_1'];
+    if(lieVal){
+      const el = document.querySelector(`input[name="lie_1"][value="${lieVal}"]`);
+      if(el){ el.checked = true; el.closest('label')?.classList.add('checked'); }
+    }
+  }
+}
+
+function renderQuiz(){
+  // 初始渲染第一页
+  showQuizPart(0);
+}
+
+function showQuizPart(partIdx){
+  currentPart = partIdx;
+  const sc = SCALES[partIdx];
+  const form = document.getElementById('quizForm');
+
+  // 更新进度条
+  const pct = Math.round(((partIdx + 1) / SCALES.length) * 100);
+  document.getElementById('quizProgress').style.width = pct + '%';
+
+  // 渲染当前部分的题目
+  let html = `<div class="scale-block">
+    <div class="scale-intro">
+      <span class="part-label">${partNames[partIdx]}</span>
+      <p>${sc.intro}</p>
+    </div>`;
+
+  let globalIdx = 1;
+  // 计算全局题号偏移（前面所有量表的题目数 + 测谎题）
+  for(let p=0; p<partIdx; p++) {
+    globalIdx += SCALES[p].count;
+    if(p === 0) globalIdx += 1; // 第一部分有测谎题
+  }
+  const startGlobalIdx = globalIdx;
+
+  sc.questions.forEach((q, qi)=>{
+    const thisGlobalIdx = startGlobalIdx + qi;
+    // 第一部分倒数第二题前嵌入测谎题
+    if(partIdx === 0 && q.n === 11){
+      html += renderLieQuestion('lie_1', '为确保您在认真阅读每道题，本题请直接选择「非常符合」。', thisGlobalIdx - 1);
+    }
+    html += renderQuestion(sc, q, thisGlobalIdx);
+  });
+
+  html += '</div>';
+  form.innerHTML = html;
+
+  // 绑定单选样式切换
+  form.addEventListener('change', e=>{
+    if(e.target.type === 'radio'){
+      const grp = e.target.closest('.opts');
+      if(grp) grp.querySelectorAll('label').forEach(l => l.classList.remove('checked'));
       e.target.closest('label').classList.add('checked');
     }
   });
+
+  // 隐藏错误提示
+  document.getElementById('quizErr').style.display = 'none';
+
+  // 渲染导航按钮
+  renderQuizNav();
+
+  // 恢复之前已答的选项（从缓存）
+  setTimeout(() => restoreCurrentPartAnswers(), 0);
+}
+
+function renderQuizNav(){
+  const nav = document.getElementById('quizNav');
+  let html = '';
+
+  // 返回按钮（始终显示）
+  html += '<button class="btn ghost" onclick="goBasic()">返回修改信息</button>';
+
+  // 上一页按钮（非第一部分时显示）
+  if(currentPart > 0){
+    html += '<button class="btn ghost" onclick="prevPart()">← 上一部分</button>';
+  }
+
+  // 下一页 / 提交按钮
+  if(currentPart < SCALES.length - 1){
+    html += '<button class="btn" onclick="nextPart()">下一部分 →</button>';
+  } else {
+    html += '<button class="btn" onclick="submitQuiz()">提交并查看报告</button>';
+  }
+
+  nav.innerHTML = html;
+}
+
+function prevPart(){
+  showQuizPart(currentPart - 1);
+}
+
+function nextPart(){
+  // 校验当前部分是否全部作答
+  const {complete, missing} = checkCurrentPart();
+  if(!complete){
+    const list = missing.slice(0,5).map(x => '<li>'+x+'</li>').join('');
+    showModal('请完成当前部分', '<p>您还有以下题目未作答：</p><ul>'+list+'</ul>');
+    document.getElementById('quizErr').style.display = 'block';
+    return;
+  }
+  // 保存当前页答案再切换
+  saveCurrentPartAnswers();
+  document.getElementById('quizErr').style.display = 'none';
+  showQuizPart(currentPart + 1);
+}
+
+function checkCurrentPart(){
+  const sc = SCALES[currentPart];
+  const missing = [];
+  let globalIdx = 1;
+  for(let p=0; p<currentPart; p++){
+    globalIdx += SCALES[p].count;
+    if(p === 0) globalIdx += 1;
+  }
+
+  sc.questions.forEach((q, qi)=>{
+    const thisGlobalIdx = globalIdx + qi;
+    if(currentPart === 0 && q.n === 11){
+      // 检查测谎题
+      const el = document.querySelector('input[name="lie_1"]:checked');
+      if(!el) missing.push(`第 ${thisGlobalIdx - 1} 题`);
+    }
+    const el = document.querySelector(`input[name="${sc.key}_${q.n}"]:checked`);
+    if(!el) missing.push(`第 ${thisGlobalIdx} 题`);
+  });
+
+  return {complete: missing.length === 0, missing};
 }
 
 function renderQuestion(sc, q, idx){
@@ -670,18 +802,34 @@ function collectAnswers(){
   const missing=[];
   let globalIdx=1;
   const lie={1:null};
+
+  // 先保存当前页最新答案到缓存
+  saveCurrentPartAnswers();
+
   SCALES.forEach((sc,si)=>{
     ans[sc.key]=[];
-    sc.questions.forEach(q=>{
+    sc.questions.forEach((q,i)=>{
       if(si===0 && q.n===11){
-        const el=document.querySelector('input[name="lie_1"]:checked');
-        if(!el) missing.push(`第 ${globalIdx} 题：为确保您在认真阅读每道题，本题请直接选择「非常符合」。`);
-        else lie[1]=parseInt(el.value,10);
+        // 测谎题：优先从缓存取
+        if(currentPart === 0){
+          const el=document.querySelector('input[name="lie_1"]:checked');
+          if(!el) missing.push(`第 ${globalIdx} 题：为确保您在认真阅读每道题，本题请直接选择「非常符合」。`);
+          else lie[1]=parseInt(el.value,10);
+        } else {
+          lie[1] = savedPartAnswers['_lie_1'] || null;
+          if(lie[1] === null) missing.push(`第 ${globalIdx} 题：测谎题未作答`);
+        }
         globalIdx++;
       }
-      const el=document.querySelector(`input[name="${sc.key}_${q.n}"]:checked`);
-      if(!el){ missing.push(`第 ${globalIdx} 题：${q.t}`); ans[sc.key].push(null); }
-      else ans[sc.key].push(parseInt(el.value,10));
+      // 优先从缓存取（分页模式下非当前页的题目不在 DOM 中）
+      const cached = (savedPartAnswers[sc.key] || {})[q.n];
+      if(cached !== undefined){
+        ans[sc.key].push(cached);
+      } else {
+        const el=document.querySelector(`input[name="${sc.key}_${q.n}"]:checked`);
+        if(!el){ missing.push(`第 ${globalIdx} 题：${q.t}`); ans[sc.key].push(null); }
+        else ans[sc.key].push(parseInt(el.value,10));
+      }
       globalIdx++;
     });
   });
@@ -1054,7 +1202,6 @@ renderQuiz();
 initRadioGroups();
 if(!readReportParams()){
   // 直接进入问卷说明页，点击「开始作答」后填写基础信息
-  initWechat();
   showStep('welcome');
 }
 </script>
