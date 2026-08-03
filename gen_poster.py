@@ -3,8 +3,8 @@ import base64
 from io import BytesIO
 
 URL = "https://xunxinli.com"
-OUT_PNG = "/Users/jinnan/WorkBuddy/2026-07-14-09-47-59/qr-xunxinli.png"
-OUT_HTML = "/Users/jinnan/WorkBuddy/2026-07-14-09-47-59/poster-xunxinli.html"
+OUT_PNG = "/Users/jinnan/WorkBuddy/2026-07-14-09-47-59/survey/qr-xunxinli.png"
+OUT_HTML = "/Users/jinnan/WorkBuddy/2026-07-14-09-47-59/survey/poster-xunxinli.html"
 
 # 高纠错等级，方便手机远距离/弱光识别
 qr = qrcode.QRCode(

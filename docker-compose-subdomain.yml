@@ -50,11 +50,11 @@ services:
     volumes:
       - ./backend/server.js:/app/server.js:ro
       - ./backend/package.json:/app/package.json:ro
-      - ../survey/index.html:/app/index.html:ro
-      - ../survey/poster.html:/app/poster.html:ro
-      - ../survey/admin.html:/app/admin.html:ro
-      - ../survey/assets:/app/assets:ro
-      - ../MP_verify_b1s8XUY2r8hgdUhB.txt:/app/MP_verify_b1s8XUY2r8hgdUhB.txt:ro
+      - ./survey/index.html:/app/index.html:ro
+      - ./survey/poster.html:/app/poster.html:ro
+      - ./survey/admin.html:/app/admin.html:ro
+      - ./survey/assets:/app/assets:ro
+      - ./MP_verify_b1s8XUY2r8hgdUhB.txt:/app/MP_verify_b1s8XUY2r8hgdUhB.txt:ro
     networks:
       - app-net
 
@@ -68,11 +68,11 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx-subdomain.conf:/etc/nginx/conf.d/default.conf:ro
       # 官网（根域名）——独立目录 /data/xunxinli（与问卷系统分离）
       - /data/xunxinli:/usr/share/nginx/html:ro
       # 问卷（子域 survey.xunxinli.com）——平级独立挂载，避免嵌套进只读根目录
-      - ../survey:/usr/share/nginx/survey:ro
+      - ./survey:/usr/share/nginx/survey:ro
       # 微信校验文件 MP_verify_*.txt 不单独挂载（只读根目录无法建挂载点），
       # 直接放进被服务的目录：/data/xunxinli（根域）与 survey/（子域），由 nginx 当静态文件 serve。
       - certbot_conf:/etc/letsencrypt:ro

@@ -3,8 +3,8 @@ import base64
 from io import BytesIO
 
 URL = "https://survey.xunxinli.com"
-OUT_PNG = "/Users/jinnan/WorkBuddy/2026-07-14-09-47-59/qr-survey-xunxinli.png"
-OUT_HTML = "/Users/jinnan/WorkBuddy/2026-07-14-09-47-59/poster-survey-xunxinli.html"
+OUT_PNG = "/Users/jinnan/WorkBuddy/2026-07-14-09-47-59/survey/qr-survey-xunxinli.png"
+OUT_HTML = "/Users/jinnan/WorkBuddy/2026-07-14-09-47-59/survey/poster-survey-xunxinli.html"
 
 # 与问卷前端配色保持一致：暖珊瑚橙主色 #e07a5f / 渐变 #e89b7b / 暖米背景 #fbf5ee
 BRAND = "#e07a5f"
