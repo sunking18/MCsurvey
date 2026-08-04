@@ -189,8 +189,8 @@
 
   <!-- 步骤 1：基础信息 -->
   <div id="step-basic" class="step">
-    <div class="step-header">步骤 <b>1 / 3</b>：基础信息</div>
-    <div class="progress"><div class="fill" style="width:33%"></div></div>
+    <div class="step-header">步骤 <b>3 / 3</b>：基础信息</div>
+    <div class="progress"><div class="fill" style="width:90%"></div></div>
     <section class="card">
       <div class="sec-title">该部分想了解您的基础信息</div>
       <div class="sec-sub">请根据您的实际情况进行选择和填写。带 <span style="color:var(--red)">*</span> 为必填项。</div>
@@ -228,10 +228,6 @@
               <option>20000元以上</option>
               <option>不便透露</option>
             </select>
-          </div>
-          <div class="field">
-            <label>联系方式</label>
-            <input type="text" name="contact" placeholder="手机号或邮箱，用于后续服务联系">
           </div>
           <div class="field">
             <label>您有几个子女<span class="req">*</span></label>
@@ -283,8 +279,8 @@
       </form>
       <div class="err" id="basicErr">请填写完整必填项后再继续。</div>
       <div class="btn-row">
-        <button class="btn ghost" onclick="goWelcome()">返回</button>
-        <button class="btn" onclick="goQuiz()">下一步：填写问卷</button>
+        <button class="btn ghost" onclick="goQuizFromBasic()">返回修改问卷</button>
+        <button class="btn" onclick="submitQuiz()">提交并查看报告</button>
       </div>
     </section>
   </div>
@@ -477,14 +473,26 @@ function showStep(id){
 function goWelcome(){ showStep('welcome'); }
 function goBasic(){ showStep('basic'); }
 function goQuiz(){
-  const {ok,missing,errors}=checkBasic();
-  if(!ok){
-    let html='<p>请补全以下必填项：</p>';
-    if(missing.length) html+='<ul>'+missing.map(x=>'<li>'+x+'</li>').join('')+'</ul>';
-    if(errors.length) html+='<p style="color:var(--red);margin-top:8px;">以下信息格式有误：</p><ul style="color:var(--red);">'+errors.map(x=>'<li>'+x+'</li>').join('')+'</ul>';
-    showModal('请完善信息',html);
+  // 从基础信息进入问卷时，直接显示问卷（不再校验基础信息）
+  showStep('quiz');
+  if(typeof currentPart === 'undefined') currentPart = 0;
+  showQuizPart(currentPart);
+}
+// 问卷最后一部分 → 进入基础信息（校验当前部分完整性后跳转）
+function goBasicFromQuiz(){
+  const {complete, missing} = checkCurrentPart();
+  if(!complete){
+    const list = missing.slice(0,5).map(x => '<li>'+x+'</li>').join('');
+    showModal('请完成当前部分', '<p>您还有以下题目未作答：</p><ul>'+list+'</ul>');
+    document.getElementById('quizErr').style.display = 'block';
     return;
   }
+  saveCurrentPartAnswers();
+  document.getElementById('quizErr').style.display = 'none';
+  showStep('basic');
+}
+// 基础信息页「返回修改问卷」按钮
+function goQuizFromBasic(){
   document.getElementById('basicErr').style.display='none';
   showStep('quiz');
 }
@@ -502,12 +510,6 @@ function checkBasic(){
   if(!b.phone_last4) missing.push('手机号后四位');
   else if(!/^\d{4}$/.test(b.phone_last4)) errors.push('手机号后四位应为 4 位数字');
   if(!b.city) missing.push('所在城市');
-  // 联系方式选填，但若填了需校验格式（手机号支持 +86 前缀及空格，邮箱按标准格式）
-  if(b.contact){
-    const c=b.contact.replace(/\s/g,''); // 去空格，避免用户误输空格被拒
-    if(!/^(\+?86)?1[3-9]\d{9}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(c))
-      errors.push('联系方式格式不正确，请填写有效手机号或邮箱');
-  }
   // 子女年龄范围校验
   const childCount = parseInt(b.children_count || '0', 10);
   for(let i=1; i<=childCount && i<=4; i++){
@@ -550,7 +552,7 @@ function collectDevice(){
 function startSurvey(){
   // 记录开始作答时间，用于计算答题时长
   startTime=new Date().toISOString();
-  goBasic();
+  goQuiz();
 }
 
 /* ================= 基础信息 ================= */
@@ -712,19 +714,18 @@ function renderQuizNav(){
   const nav = document.getElementById('quizNav');
   let html = '';
 
-  // 返回按钮（始终显示）
-  html += '<button class="btn ghost" onclick="goBasic()">返回修改信息</button>';
-
-  // 上一页按钮（非第一部分时显示）
-  if(currentPart > 0){
+  // 返回按钮（第一部分回欢迎页，其余回上一部分）
+  if(currentPart === 0){
+    html += '<button class="btn ghost" onclick="goWelcome()">返回</button>';
+  } else {
     html += '<button class="btn ghost" onclick="prevPart()">← 上一部分</button>';
   }
 
-  // 下一页 / 提交按钮
+  // 下一页 / 填写基础信息 按钮
   if(currentPart < SCALES.length - 1){
     html += '<button class="btn" onclick="nextPart()">下一部分 →</button>';
   } else {
-    html += '<button class="btn" onclick="submitQuiz()">提交并查看报告</button>';
+    html += '<button class="btn" onclick="goBasicFromQuiz()">下一步：填写基础信息 →</button>';
   }
 
   nav.innerHTML = html;
