@@ -1035,9 +1035,8 @@ function renderEnding(){
 }
 
 function closeReport(){
-  // 直接关闭当前页面（问卷星跳转打开的新标签通常可被关闭）
-  try{ window.open('', '_self'); }catch(e){}
-  window.close();
+  // 返回欢迎页（浏览器安全限制导致 window.close() 对直接打开的标签页无效）
+  goWelcome();
 }
 
 function renderDimDetails(scores){
