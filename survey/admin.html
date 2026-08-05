@@ -62,10 +62,21 @@
   /* 表格 */
   .table-card{background:var(--card);border-radius:var(--radius);padding:22px 24px;box-shadow:0 2px 12px rgba(30,50,80,.04);border:1px solid var(--border);margin-bottom:28px;overflow-x:auto;}
   .table-card h3{font-size:15px;margin-bottom:16px;}
+  .table-card .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .table-card .toolbar input{padding:8px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;width:220px;outline:none;transition:.2s;}
+  .table-card .toolbar input:focus{border-color:var(--brand);}
+  .table-card .toolbar .hint{font-size:11.5px;color:var(--sub);margin-left:auto;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th{background:var(--bg);padding:10px 12px;text-align:left;font-weight:600;color:var(--sub);border-bottom:2px solid var(--border);white-space:nowrap;}
-  td{padding:9px 12px;border-bottom:1px solid #f0f2f7;white-space:nowrap;}
+  td{padding:9px 12px;border-bottom:1px solid #f0f2f7;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;}
   tr:hover td{background:#fafbfe;}
+
+  /* 分页 */
+  .pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;flex-wrap:wrap;}
+  .pager button{padding:7px 14px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;transition:.15s;}
+  .pager button:hover:not(:disabled){border-color:var(--brand);color:var(--brand);}
+  .pager button:disabled{opacity:.4;cursor:not-allowed;}
+  .pager .page-info{font-size:12.5px;color:var(--sub);padding:0 8px;}
   .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11.5px;font-weight:600;}
   .tag-green{background:#eafaf2;color:#1a7a56;}
   .tag-yellow{background:#fdf6e8;color:#9a7b2a;}
@@ -105,7 +116,8 @@
     <h1>📊 数据概览</h1>
     <div class="actions">
       <button class="btn-sm primary" onclick="refreshData()">🔄 刷新数据</button>
-      <a class="btn-sm" id="csvLink" href="#" download>⬇️ 下载 CSV</a>
+      <a class="btn-sm" id="csvOptionLink" href="#" download>⬇️ 下载CSV（按选项）</a>
+      <a class="btn-sm" id="csvScoreLink" href="#" download>⬇️ 下载CSV（按分值）</a>
       <a class="btn-sm" id="jsonLink" href="#" download>⬇️ 下载 JSON</a>
       <button class="btn-sm danger" onclick="doLogout()">退出登录</button>
     </div>
@@ -113,6 +125,18 @@
 
   <!-- 概览卡片 -->
   <div class="cards" id="overviewCards"></div>
+
+  <!-- 数据明细表格（分页+搜索） -->
+  <div class="table-card">
+    <h3>📋 数据明细</h3>
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="搜索性别/年龄/城市/姓名缩写..." onkeydown="if(event.key==='Enter')loadDataTable(1)">
+      <button class="btn-sm primary" onclick="loadDataTable(1)">搜索</button>
+      <span class="hint" id="tableHint"></span>
+    </div>
+    <div id="dataTableWrap"><div class="loading">加载中...</div></div>
+    <div class="pager" id="tablePager"></div>
+  </div>
 
   <!-- 维度分数分布 -->
   <div class="charts" id="dimCharts"></div>
@@ -165,7 +189,8 @@ function doLogout(){
   document.getElementById('keyInput').value='';
 }
 function setLinks(k){
-  document.getElementById('csvLink').href='/api/export.csv?key='+encodeURIComponent(k);
+  document.getElementById('csvOptionLink').href='/api/export.csv?key='+encodeURIComponent(k)+'&mode=option';
+  document.getElementById('csvScoreLink').href='/api/export.csv?key='+encodeURIComponent(k)+'&mode=score';
   document.getElementById('jsonLink').href='/api/export?key='+encodeURIComponent(k);
 }
 
@@ -373,6 +398,181 @@ function renderQStats(qs){
   const k = p.get('key');
   if(k){ document.getElementById('keyInput').value=k; doLogin(); }
 })();
+
+/* ========== 数据明细表格（分页+搜索） ========== */
+let currentPage = 1;
+const PAGE_SIZE = 20;
+
+// 题目元信息（用于展示每题选项文本）
+const Q_TEXTS = [
+  {t:'我允许孩子在一些事情上和我有不同意见。',dim:'开放尊重',opts:['完全不符合','比较不符合','一般','比较符合','非常符合']},
+  {t:'和孩子谈家庭规则或安排时，我会让孩子参与讨论。',dim:'规则协商',opts:['完全不符合','比较不符合','一般','比较符合','非常符合']},
+  {t:'和孩子谈事情时，我会主动询问孩子的看法。',dim:'主动询问',opts:['完全不符合','比较不符合','一般','比较符合','非常符合']},
+  {t:'和孩子讨论事情时，我常常坚持自己说了算。',dim:'控制式沟通',opts:['完全不符合','比较不符合','一般','比较符合','非常符合'],reverse:true},
+  {t:'我鼓励孩子表达不同意见，并说明自己的理由。',dim:'开放表达',opts:['完全不符合','比较不符合','一般','比较符合','非常符合']},
+  {t:'我会鼓励孩子从不同角度看问题。',dim:'引导讨论',opts:['完全不符合','比较不符合','一般','比较符合','非常符合']},
+  {t:'孩子愿意告诉我他在想什么。',dim:'孩子表达意愿',opts:['完全不符合','比较不符合','一般','比较符合','非常符合']},
+  {t:'孩子不认同我的观点时，我通常会很生气。',dim:'情绪升级',opts:['完全不符合','比较不符合','一般','比较符合','非常符合'],reverse:true},
+  {t:'孩子做得不好时，我会先批评，而不是先了解原因和想法。',dim:'批评优先',opts:['完全不符合','比较不符合','一般','比较符合','非常符合'],reverse:true},
+  {t:'我和孩子会谈论彼此的感受和情绪。',dim:'情感沟通',opts:['完全不符合','比较不符合','一般','比较符合','非常符合']},
+  {t:'即使意见不一致，孩子也愿意和我讲话。',dim:'沟通安全感',opts:['完全不符合','比较不符合','一般','比较符合','非常符合']},
+  {t:'即使不同意孩子的观点，我也愿意认真听他说完。',dim:'倾听接纳',opts:['完全不符合','比较不符合','一般','比较符合','非常符合']},
+  {t:'孩子学习时经常心不在焉、注意力难以集中，让我感到苦恼。',dim:'学习状态担忧',opts:['从不','有时','一般','经常','总是']},
+  {t:'我担心自己的能力不足，无法为孩子提供更好的教育支持。',dim:'父母能力焦虑',opts:['从不','有时','一般','经常','总是']},
+  {t:'想到自己无法为孩子提供更多或更好的教育资源，我会感到心烦。',dim:'教育资源焦虑',opts:['从不','有时','一般','经常','总是']},
+  {t:'孩子临近重要考试时，我比平时更容易紧张和焦躁。',dim:'考试焦虑',opts:['从不','有时','一般','经常','总是']},
+  {t:'孩子学习态度不够认真时，我会感到着急，甚至忍不住批评他。',dim:'焦虑外化',opts:['从不','有时','一般','经常','总是']},
+  {t:'孩子备考重要考试时，我会紧张得睡不好。',dim:'考试焦虑',opts:['从不','有时','一般','经常','总是']},
+  {t:'孩子考试没考好时，我会急得坐立不安。',dim:'成绩焦虑',opts:['从不','有时','一般','经常','总是']},
+  {t:'孩子的教育费用支出较多时，我会感到经济负担较重。',dim:'教育投入焦虑',opts:['从不','有时','一般','经常','总是']},
+  {t:'孩子的作业或学习问题我辅导不来时，会感到无助。',dim:'父母无力感',opts:['从不','有时','一般','经常','总是']},
+  {t:'想到孩子所在班级或学校的学习环境可能影响学习，我会感到烦心。',dim:'学校环境焦虑',opts:['从不','有时','一般','经常','总是']},
+  {t:'孩子做作业拖拉、经常不能按时完成时，我会感到着急。',dim:'学习执行担忧',opts:['从不','有时','一般','经常','总是']},
+  {t:'想到如果没人监督孩子就不会主动学习，我会感到无助。',dim:'学习自主性担忧',opts:['从不','有时','一般','经常','总是']},
+  {t:'当事情和以前不一样时，孩子通常能慢慢适应。',dim:'适应变化',opts:['从不这样','很少这样','有时这样','经常这样','总是这样']},
+  {t:'遇到不顺利或不好的事情时，孩子通常会尝试想办法应对。',dim:'应对困难',opts:['从不这样','很少这样','有时这样','经常这样','总是这样']},
+  {t:'遇到让人头疼的难题时，孩子能尝试让自己放松或心情好一些。',dim:'情绪调节',opts:['从不这样','很少这样','有时这样','经常这样','总是这样']},
+  {t:'努力解决麻烦之后，孩子通常能从中获得经验或信心。',dim:'成长感',opts:['从不这样','很少这样','有时这样','经常这样','总是这样']},
+  {t:'生病、受伤、受挫或难过之后，孩子通常能较快恢复。',dim:'恢复力',opts:['从不这样','很少这样','有时这样','经常这样','总是这样']},
+  {t:'即使过程有点困难，孩子通常仍相信自己可以完成或做好。',dim:'自我效能',opts:['从不这样','很少这样','有时这样','经常这样','总是这样']},
+  {t:'心里着急时，孩子仍能尽量专注，把事情想清楚。',dim:'压力下专注',opts:['从不这样','很少这样','有时这样','经常这样','总是这样']},
+  {t:'即使一件事没做好，孩子也不容易马上放弃。',dim:'坚持性',opts:['从不这样','很少这样','有时这样','经常这样','总是这样']},
+  {t:'遇到困难和挑战时，孩子愿意面对或继续尝试。',dim:'勇于面对',opts:['从不这样','很少这样','有时这样','经常这样','总是这样']},
+  {t:'当孩子伤心、害怕或想发脾气时，通常知道怎样让自己慢慢平静下来。',dim:'情绪平复',opts:['从不这样','很少这样','有时这样','经常这样','总是这样']}
+];
+
+function parseAnswers(ansJson) {
+  let a = {};
+  try { a = JSON.parse(ansJson || '{}'); } catch (e) { a = {}; }
+  const result = [];
+  const keys = ['comm','anx','res'];
+  for (const k of keys) {
+    const arr = Array.isArray(a[k]) ? a[k] : [];
+    for (let i = 0; i < arr.length; i++) {
+      const v = parseInt(arr[i], 10);
+      result.push((isNaN(v) || v < 1 || v > 5) ? null : v);
+    }
+  }
+  while (result.length < 34) result.push(null);
+  return result;
+}
+
+function getOptionText(qIdx, val) {
+  if (val === null || val === undefined || val === '') return '';
+  const q = Q_TEXTS[qIdx];
+  if (!q || !q.opts) return val;
+  const idx = parseInt(val, 10) - 1;
+  if (idx >= 0 && idx < q.opts.length) return q.opts[idx];
+  return val;
+}
+
+function formatDuration(r) {
+  if (!r.start_time || !r.submit_time) return '';
+  const t0 = new Date(r.start_time).getTime();
+  const t1 = new Date(r.submit_time).getTime();
+  if (isNaN(t0) || isNaN(t1) || t1 < t0) return '';
+  return Math.round((t1 - t0) / 1000) + '秒';
+}
+
+function loadDataTable(page) {
+  if (!API_KEY) return;
+  currentPage = page;
+  const search = document.getElementById('searchInput').value.trim();
+  let url = '/api/responses?key=' + encodeURIComponent(API_KEY) + '&page=' + page + '&pageSize=' + PAGE_SIZE;
+  if (search) url += '&search=' + encodeURIComponent(search);
+
+  document.getElementById('dataTableWrap').innerHTML = '<div class="loading">加载中...</div>';
+  fetch(url)
+    .then(r => r.json())
+    .then(j => {
+      if (!j.success) { document.getElementById('dataTableWrap').innerHTML = '<div class="empty">加载失败：' + (j.message||'未知错误') + '</div>'; return; }
+      renderDataTable(j.data || []);
+      renderPager(j.pagination || {});
+      document.getElementById('tableHint').textContent = `共 ${j.pagination.total} 条记录`;
+    })
+    .catch(e => { document.getElementById('dataTableWrap').innerHTML = '<div class="empty">网络错误：' + e.message + '</div>'; });
+}
+
+function renderDataTable(rows) {
+  const wrap = document.getElementById('dataTableWrap');
+  if (!rows.length) { wrap.innerHTML = '<div class="empty">暂无数据</div>'; return; }
+
+  // 基础字段列
+  let html = `<table>
+    <tr>
+      <th>ID</th><th>提交时间</th><th>答题时长</th>
+      <th>性别</th><th>年龄</th><th>职业</th><th>收入</th><th>城市</th>
+      <th>姓名缩写</th><th>手机后4位</th><th>子女数</th>
+      <th>沟通总分</th><th>焦虑总分</th><th>韧性总分</th>`;
+
+  // 34题列头（用题干前20字+维度）
+  Q_TEXTS.forEach((q, i) => {
+    const shortTitle = q.t.length > 18 ? q.t.slice(0, 18) + '…' : q.t;
+    html += `<th title="${q.t}">q${i+1}<br><small style="font-weight:400;color:var(--sub);">${shortTitle}</small></th>`;
+  });
+
+  html += '</tr>';
+
+  // 数据行
+  for (const r of rows) {
+    const ans = parseAnswers(r.answers);
+    let scores = {};
+    try { scores = JSON.parse(r.scores || '{}'); } catch(e) {}
+
+    html += `<tr>
+      <td>${r.id}</td>
+      <td style="font-size:11.5px;">${(r.created_at||'').replace('T',' ').slice(0,19)}</td>
+      <td>${formatDuration(r)}</td>
+      <td>${r.gender||''}</td><td>${r.age||''}</td><td>${r.occupation||''}</td><td>${r.income||''}</td><td>${r.city||''}</td>
+      <td>${r.name_code||''}</td><td>${r.phone_last4||''}</td><td>${r.children_count||''}</td>
+      <td><strong style="color:var(--brand);">${(scores.comm&&scores.comm.total)||''}</strong></td>
+      <td><strong style="color:var(--orange);">${(scores.anx&&scores.anx.total)||''}</strong></td>
+      <td><strong style="color:var(--green);">${(scores.res&&scores.res.total)||''}</strong></td>`;
+
+    // 34题值：显示选项文本（鼠标悬停看分值）
+    ans.forEach((v, i) => {
+      const optText = getOptionText(i, v);
+      const title = v !== null ? `分值: ${v}${Q_TEXTS[i].reverse ? ' (反向题)' : ''}` : '';
+      html += `<td title="${title}" style="text-align:center;font-size:11.5px;${v!==null?'':'color:#ccc'}">${optText}</td>`;
+    });
+
+    html += '</tr>';
+  }
+
+  html += '</table>';
+  wrap.innerHTML = html;
+}
+
+function renderPager(pg) {
+  const pager = document.getElementById('tablePager');
+  const { page, totalPages, total } = pg;
+  if (totalPages <= 1) { pager.innerHTML = ''; return; }
+
+  let html = '';
+  // 上一页
+  html += `<button onclick="loadDataTable(${page-1})" ${page<=1?'disabled':''}>◀ 上一页</button>`;
+  // 页码
+  const start = Math.max(1, page - 2);
+  const end = Math.min(totalPages, page + 2);
+  if (start > 1) html += `<button onclick="loadDataTable(1)">1</button><span class="page-info">…</span>`;
+  for (let i = start; i <= end; i++) {
+    html += `<button onclick="loadDataTable(${i})" ${i===page?'style="border-color:var(--brand);color:var(--brand);background:var(--brand-soft);"':''}>${i}</button>`;
+  }
+  if (end < totalPages) html += `<span class="page-info">…</span><button onclick="loadDataTable(${totalPages})">${totalPages}</span>`;
+  // 下一页
+  html += `<button onclick="loadDataTable(${page+1})" ${page>=totalPages?'disabled':''}>下一页 ▶</button>`;
+  // 信息
+  html += `<span class="page-info">第 ${page}/${totalPages} 页 · 共 ${total} 条</span>`;
+
+  pager.innerHTML = html;
+}
+
+// 登录成功后自动加载表格第一页
+const _origRenderAll = renderAll;
+renderAll = function(d) {
+  _origRenderAll(d);
+  loadDataTable(1);
+};
 </script>
 </body>
 </html>

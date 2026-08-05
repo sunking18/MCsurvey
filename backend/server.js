@@ -227,42 +227,46 @@ app.post('/api/submit', async (req, res) => {
   }
 });
 
-// ========== 题项维度备注 + 选项标签（CSV 表头用） ==========
+// ========== 题项元信息 + 选项标签（CSV 表头用） ==========
+// 包含完整题干、维度、选项列表、是否反向题
 const Q_META = [
-  { dim: '开放尊重',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
-  { dim: '规则协商',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
-  { dim: '主动询问',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
-  { dim: '控制式沟通',   opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
-  { dim: '开放表达',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
-  { dim: '引导讨论',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
-  { dim: '孩子表达意愿', opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
-  { dim: '情绪升级',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
-  { dim: '批评优先',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
-  { dim: '情感沟通',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
-  { dim: '沟通安全感',   opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
-  { dim: '倾听接纳',     opts: ['完全不符合','比较不符合','一般','比较符合','非常符合'] },
-  { dim: '学习状态担忧', opts: ['从不','有时','一般','经常','总是'] },
-  { dim: '父母能力焦虑', opts: ['从不','有时','一般','经常','总是'] },
-  { dim: '教育资源焦虑', opts: ['从不','有时','一般','经常','总是'] },
-  { dim: '考试焦虑',     opts: ['从不','有时','一般','经常','总是'] },
-  { dim: '焦虑外化',     opts: ['从不','有时','一般','经常','总是'] },
-  { dim: '考试焦虑',     opts: ['从不','有时','一般','经常','总是'] },
-  { dim: '成绩焦虑',     opts: ['从不','有时','一般','经常','总是'] },
-  { dim: '教育投入焦虑', opts: ['从不','有时','一般','经常','总是'] },
-  { dim: '父母无力感',   opts: ['从不','有时','一般','经常','总是'] },
-  { dim: '学校环境焦虑', opts: ['从不','有时','一般','经常','总是'] },
-  { dim: '学习执行担忧', opts: ['从不','有时','一般','经常','总是'] },
-  { dim: '学习自主性担忧',opts:['从不','有时','一般','经常','总是'] },
-  { dim: '适应变化',     opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
-  { dim: '应对困难',     opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
-  { dim: '情绪调节',     opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
-  { dim: '成长感',       opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
-  { dim: '恢复力',       opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
-  { dim: '自我效能',     opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
-  { dim: '压力下专注',   opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
-  { dim: '坚持性',       opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
-  { dim: '勇于面对',     opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] },
-  { dim: '情绪平复',     opts: ['从不这样','很少这样','有时这样','经常这样','总是这样'] }
+  // 量表一：亲子沟通情况（12题）
+  { t:'我允许孩子在一些事情上和我有不同意见', dim:'开放尊重', opts:['完全不符合','比较不符合','一般','比较符合','非常符合'], reverse:false },
+  { t:'和孩子谈家庭规则或安排时，我会让孩子参与讨论', dim:'规则协商', opts:['完全不符合','比较不符合','一般','比较符合','非常符合'], reverse:false },
+  { t:'和孩子谈事情时，我会主动询问孩子的看法', dim:'主动询问', opts:['完全不符合','比较不符合','一般','比较符合','非常符合'], reverse:false },
+  { t:'和孩子讨论事情时，我常常坚持自己说了算', dim:'控制式沟通', opts:['完全不符合','比较不符合','一般','比较符合','非常符合'], reverse:true },
+  { t:'我鼓励孩子表达不同意见，并说明自己的理由', dim:'开放表达', opts:['完全不符合','比较不符合','一般','比较符合','非常符合'], reverse:false },
+  { t:'我会鼓励孩子从不同角度看问题', dim:'引导讨论', opts:['完全不符合','比较不符合','一般','比较符合','非常符合'], reverse:false },
+  { t:'孩子愿意告诉我他在想什么', dim:'孩子表达意愿', opts:['完全不符合','比较不符合','一般','比较符合','非常符合'], reverse:false },
+  { t:'孩子不认同我的观点时，我通常会很生气', dim:'情绪升级', opts:['完全不符合','比较不符合','一般','比较符合','非常符合'], reverse:true },
+  { t:'孩子做得不好时，我会先批评，而不是先了解原因和想法', dim:'批评优先', opts:['完全不符合','比较不符合','一般','比较符合','非常符合'], reverse:true },
+  { t:'我和孩子会谈论彼此的感受和情绪', dim:'情感沟通', opts:['完全不符合','比较不符合','一般','比较符合','非常符合'], reverse:false },
+  { t:'即使意见不一致，孩子也愿意和我讲话', dim:'沟通安全感', opts:['完全不符合','比较不符合','一般','比较符合','非常符合'], reverse:false },
+  { t:'即使不同意孩子的观点，我也愿意认真听他说完', dim:'倾听接纳', opts:['完全不符合','比较不符合','一般','比较符合','非常符合'], reverse:false },
+  // 量表二：学业焦虑（12题）
+  { t:'孩子学习时经常心不在焉、注意力难以集中，让我感到苦恼', dim:'学习状态担忧', opts:['从不','有时','一般','经常','总是'], reverse:false },
+  { t:'我担心自己的能力不足，无法为孩子提供更好的教育支持', dim:'父母能力焦虑', opts:['从不','有时','一般','经常','总是'], reverse:false },
+  { t:'想到自己无法为孩子提供更多或更好的教育资源，我会感到心烦', dim:'教育资源焦虑', opts:['从不','有时','一般','经常','总是'], reverse:false },
+  { t:'孩子临近重要考试时，我比平时更容易紧张和焦躁', dim:'考试焦虑', opts:['从不','有时','一般','经常','总是'], reverse:false },
+  { t:'孩子学习态度不够认真时，我会感到着急，甚至忍不住批评他', dim:'焦虑外化', opts:['从不','有时','一般','经常','总是'], reverse:false },
+  { t:'孩子备考重要考试时，我会紧张得睡不好', dim:'考试焦虑', opts:['从不','有时','一般','经常','总是'], reverse:false },
+  { t:'孩子考试没考好时，我会急得坐立不安', dim:'成绩焦虑', opts:['从不','有时','一般','经常','总是'], reverse:false },
+  { t:'孩子的教育费用支出较多时，我会感到经济负担较重', dim:'教育投入焦虑', opts:['从不','有时','一般','经常','总是'], reverse:false },
+  { t:'孩子的作业或学习问题我辅导不来时，会感到无助', dim:'父母无力感', opts:['从不','有时','一般','经常','总是'], reverse:false },
+  { t:'想到孩子所在班级或学校的学习环境可能影响学习，我会感到烦心', dim:'学校环境焦虑', opts:['从不','有时','一般','经常','总是'], reverse:false },
+  { t:'孩子做作业拖拉、经常不能按时完成时，我会感到着急', dim:'学习执行担忧', opts:['从不','有时','一般','经常','总是'], reverse:false },
+  { t:'想到如果没人监督孩子就不会主动学习，我会感到无助', dim:'学习自主性担忧',opts:['从不','有时','一般','经常','总是'], reverse:false },
+  // 量表三：心理韧性（10题）
+  { t:'当事情和以前不一样时，孩子通常能慢慢适应', dim:'适应变化', opts:['从不这样','很少这样','有时这样','经常这样','总是这样'], reverse:false },
+  { t:'遇到不顺利或不好的事情时，孩子通常会尝试想办法应对', dim:'应对困难', opts:['从不这样','很少这样','有时这样','经常这样','总是这样'], reverse:false },
+  { t:'遇到让人头疼的难题时，孩子能尝试让自己放松或心情好一些', dim:'情绪调节', opts:['从不这样','很少这样','有时这样','经常这样','总是这样'], reverse:false },
+  { t:'努力解决麻烦之后，孩子通常能从中获得经验或信心', dim:'成长感', opts:['从不这样','很少这样','有时这样','经常这样','总是这样'], reverse:false },
+  { t:'生病、受伤、受挫或难过之后，孩子通常能较快恢复', dim:'恢复力', opts:['从不这样','很少这样','有时这样','经常这样','总是这样'], reverse:false },
+  { t:'即使过程有点困难，孩子通常仍相信自己可以完成或做好', dim:'自我效能', opts:['从不这样','很少这样','有时这样','经常这样','总是这样'], reverse:false },
+  { t:'心里着急时，孩子仍能尽量专注，把事情想清楚', dim:'压力下专注', opts:['从不这样','很少这样','有时这样','经常这样','总是这样'], reverse:false },
+  { t:'即使一件事没做好，孩子也不容易马上放弃', dim:'坚持性', opts:['从不这样','很少这样','有时这样','经常这样','总是这样'], reverse:false },
+  { t:'遇到困难和挑战时，孩子愿意面对或继续尝试', dim:'勇于面对', opts:['从不这样','很少这样','有时这样','经常这样','总是这样'], reverse:false },
+  { t:'当孩子伤心、害怕或想发脾气时，通常知道怎样让自己慢慢平静下来', dim:'情绪平复', opts:['从不这样','很少这样','有时这样','经常这样','总是这样'], reverse:false }
 ];
 
 // 维度名称映射
@@ -280,25 +284,43 @@ app.get('/api/export', async (req, res) => {
   }
 });
 
-// ========== 从 answers JSON 中提取每题分数 ==========
+// ========== 从 answers JSON 中提取每题原始分（1-5） ==========
 function extractAnswers(answersJson) {
   let a = {};
   try { a = JSON.parse(answersJson || '{}'); } catch (e) { a = {}; }
   const result = [];
-  // 按 comm(12) → anx(12) → res(10) 顺序展平为 34 题
   for (const k of SCALE_KEYS) {
     const arr = Array.isArray(a[k]) ? a[k] : [];
-    // 每个值应该是 1-5 的整数
     for (let i = 0; i < arr.length; i++) {
       const v = parseInt(arr[i], 10);
-      result.push((isNaN(v) || v < 1 || v > 5) ? '' : v);
+      result.push((isNaN(v) || v < 1 || v > 5) ? null : v);
     }
   }
-  while (result.length < 34) result.push('');
+  while (result.length < 34) result.push(null);
   return result;
 }
 
-// ========== 导出 CSV（修复版：正确解析每题分数+选项文本） ============
+// ========== 获取选项文本（原始分 → 选项文字） ==========
+function getOptionText(qIdx, rawVal) {
+  if (rawVal === null || rawVal === undefined) return '';
+  const q = Q_META[qIdx];
+  if (!q || !q.opts) return String(rawVal);
+  const idx = parseInt(rawVal, 10) - 1;
+  if (idx >= 0 && idx < q.opts.length) return q.opts[idx];
+  return String(rawVal);
+}
+
+// ========== 获取计分值（反向题自动反转） ==========
+function getScoreValue(qIdx, rawVal) {
+  if (rawVal === null || rawVal === undefined) return '';
+  const q = Q_META[qIdx];
+  let v = parseInt(rawVal, 10);
+  if (isNaN(v) || v < 1 || v > 5) return '';
+  if (q && q.reverse) v = 6 - v; // 反转
+  return String(v);
+}
+
+// ========== 导出 CSV（支持 mode=option|score，完整题干列头） ==========
 app.get('/api/export.csv', async (req, res) => {
   if (req.query.key !== EXPORT_KEY) return res.status(401).send('密钥错误');
   try {
@@ -309,11 +331,18 @@ app.get('/api/export.csv', async (req, res) => {
       const s = String(v);
       return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
     };
-    // 表头：q 列显示「维度名」
-    const qHeaders = Q_META.map((q, i) => `q${i + 1}（${q.dim}）`);
+
+    // mode: 'option'=导出选项文本(默认), 'score'=导出李克特分值(反向题已反转)
+    const mode = (req.query.mode || 'option').toLowerCase();
+
+    // 表头：q 列显示「题干前20字」
+    const qHeaders = Q_META.map((q, i) => {
+      const shortTitle = q.t.length > 20 ? q.t.slice(0, 20) + '…' : q.t;
+      return `q${i + 1}（${shortTitle}）`;
+    });
     const headers = [
       'id', '提交时间', '答题时长(秒)',
-      '性别', '年龄', '所在城市',
+      '性别', '年龄', '职业', '收入', '所在城市',
       '姓名缩写', '手机后四位', '子女数',
       '沟通总分', '焦虑总分', '韧性总分',
       ...qHeaders
@@ -322,7 +351,7 @@ app.get('/api/export.csv', async (req, res) => {
 
     for (const r of rows) {
       const scores = extractScores(r.scores);
-      const qVals = extractAnswers(r.answers);
+      const rawVals = extractAnswers(r.answers);
 
       let dur = '';
       if (r.start_time && r.submit_time) {
@@ -331,20 +360,26 @@ app.get('/api/export.csv', async (req, res) => {
         if (!isNaN(t0) && !isNaN(t1) && t1 >= t0) dur = Math.round((t1 - t0) / 1000);
       }
 
+      // 根据模式决定每题展示内容
+      const qVals = rawVals.map((v, i) =>
+        mode === 'score' ? esc(getScoreValue(i, v)) : esc(getOptionText(i, v))
+      );
+
       const row = [
         r.id,
         (r.server_time || r.created_at || '').replace(/T/, ' ').slice(0, 19),
         dur,
-        r.gender || '', r.age || '', r.city || '',
+        r.gender || '', r.age || '', r.occupation || '', r.income || '', r.city || '',
         r.name_code || '', r.phone_last4 || '', r.children_count || '',
         scores.comm || '', scores.anx || '', scores.res || '',
         ...qVals
       ];
-      lines.push(row.map(esc).join(','));
+      lines.push(row.join(','));
     }
 
+    const suffix = mode === 'score' ? '_score' : '_option';
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="survey_responses_${new Date().toISOString().slice(0,10)}.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="survey_responses_${new Date().toISOString().slice(0,10)}${suffix}.csv"`);
     res.send('\uFEFF' + lines.join('\n'));
   } catch (e) {
     console.error('CSV导出失败:', e);
@@ -362,6 +397,56 @@ function extractScores(scoresJson) {
     res:  (s.res && s.res.total) ? s.res.total : ''
   };
 }
+
+// ========== 分页查询原始数据（供 admin 表格使用） ==========
+app.get('/api/responses', async (req, res) => {
+  if (req.query.key !== EXPORT_KEY) return res.status(401).json({ success: false, message: '密钥错误' });
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
+    const search = (req.query.search || '').trim();
+    const offset = (page - 1) * pageSize;
+
+    // 构建查询：支持对 gender/age/city/name_code 的模糊搜索
+    let whereSql = '';
+    let params = [];
+    if (search) {
+      whereSql = `WHERE gender LIKE ? OR age LIKE ? OR city LIKE ? OR name_code LIKE ? OR occupation LIKE ?`;
+      const s = `%${search}%`;
+      params = [s, s, s, s, s];
+    }
+
+    const countRes = await pool.execute(
+      `SELECT COUNT(*) AS total FROM responses ${whereSql}`, params
+    );
+    const total = countRes[0][0].total;
+
+    const [rows] = await pool.execute(
+      `SELECT id, created_at, gender, age, occupation, income,
+              name_code, phone_last4, city, children_count,
+              child_age_1, child_gender_1, child_age_2, child_gender_2,
+              child_age_3, child_gender_3, lie_flag,
+              answers, scores, start_time, submit_time, device_model
+       FROM responses ${whereSql}
+       ORDER BY id DESC LIMIT ? OFFSET ?`,
+      [...params, pageSize, offset]
+    );
+
+    res.json({
+      success: true,
+      data: rows,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    });
+  } catch (e) {
+    console.error('分页查询失败:', e);
+    res.status(500).json({ success: false, message: '查询失败' });
+  }
+});
 
 // ========== 统计分析 API ==========
 app.get('/api/stats', async (req, res) => {
@@ -463,10 +548,12 @@ app.get('/api/stats', async (req, res) => {
     // 每题平均分
     const qStats = qArrays.map((arr, i) => ({
       q: i + 1,
-      dim: Q_META[i].dim,
+      text: Q_META[i].t || '',
+      dim: Q_META[i].dim || '',
+      reverse: Q_META[i].reverse || false,
       count: arr.length,
       avg: arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length * 100) / 100 : 0,
-      opts: Q_META[i].opts
+      opts: Q_META[i].opts || []
     }));
 
     // 每日趋势（最近30天，倒序）
