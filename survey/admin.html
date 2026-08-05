@@ -522,10 +522,39 @@ function loadDataTable(page) {
   fetch(url)
     .then(r => r.json())
     .then(j => {
-      if (!j.success) { document.getElementById('dataTableWrap').innerHTML = '<div class="empty">加载失败：' + (j.message||'未知错误') + '</div>'; return; }
+      if (!j.success) {
+        // ⚡ 降级：/api/responses 不可用时回退到 /api/export
+        console.warn('[admin] /api/responses 失败，降级到 /api/export:', j.message);
+        loadDataTableFallback();
+        return;
+      }
       renderDataTable(j.data || []);
       renderPager(j.pagination || {});
       document.getElementById('tableHint').textContent = `共 ${j.pagination.total} 条记录`;
+    })
+    .catch(e => {
+      console.warn('[admin] /api/responses 网络错误，降级到 /api/export:', e.message);
+      loadDataTableFallback();
+    });
+}
+
+/* ========== 降级方案：用 /api/export 数据渲染表格（兼容旧版后端） ========== */
+function loadDataTableFallback() {
+  if (!API_KEY) return;
+  document.getElementById('dataTableWrap').innerHTML = '<div class="loading">加载中（备用接口）...</div>';
+  fetch('/api/export?key=' + encodeURIComponent(API_KEY))
+    .then(r => r.json())
+    .then(j => {
+      if (!j.success) { document.getElementById('dataTableWrap').innerHTML = '<div class="empty">加载失败：' + (j.message||'未知错误') + '</div>'; return; }
+      const allData = j.data || [];
+      // 手动分页
+      const total = allData.length;
+      const totalPages = Math.ceil(total / PAGE_SIZE);
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const pageData = allData.slice(start, start + PAGE_SIZE);
+      renderDataTable(pageData);
+      renderPager({ page: currentPage, pageSize: PAGE_SIZE, total, totalPages });
+      document.getElementById('tableHint').textContent = `共 ${total} 条记录（降级模式）`;
     })
     .catch(e => { document.getElementById('dataTableWrap').innerHTML = '<div class="empty">网络错误：' + e.message + '</div>'; });
 }
