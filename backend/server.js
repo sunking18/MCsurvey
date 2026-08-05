@@ -428,12 +428,12 @@ app.get('/api/responses', async (req, res) => {
     const total = countRes[0][0].total;
 
     const [rows] = await pool.execute(
-      `SELECT id, created_at, gender, age, occupation, income,
+      `SELECT id, created_at, server_time, gender, age, occupation, income, contact, area,
               name_code, phone_last4, city, children_count,
               child_age_1, child_gender_1, child_age_2, child_gender_2,
               child_age_3, child_gender_3, lie_flag,
               answers, scores, start_time, submit_time, device_model,
-              ip, total_duration
+              ip, total_duration, report_html
        FROM responses ${whereSql}
        ORDER BY id DESC LIMIT ? OFFSET ?`,
       [...params, pageSize, offset]

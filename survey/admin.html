@@ -528,6 +528,7 @@ function loadDataTable(page) {
         loadDataTableFallback();
         return;
       }
+      cacheRows(j.data || []);
       renderDataTable(j.data || []);
       renderPager(j.pagination || {});
       document.getElementById('tableHint').textContent = `共 ${j.pagination.total} 条记录`;
@@ -552,6 +553,7 @@ function loadDataTableFallback() {
       const totalPages = Math.ceil(total / PAGE_SIZE);
       const start = (currentPage - 1) * PAGE_SIZE;
       const pageData = allData.slice(start, start + PAGE_SIZE);
+      cacheRows(allData);  // 缓存全量，便于查看报告
       renderDataTable(pageData);
       renderPager({ page: currentPage, pageSize: PAGE_SIZE, total, totalPages });
       document.getElementById('tableHint').textContent = `共 ${total} 条记录（降级模式）`;
@@ -566,11 +568,11 @@ function renderDataTable(rows) {
   // 基础字段列
   let html = `<table>
     <tr>
-      <th>ID</th><th>提交时间</th><th>答题时长</th>
-      <th>性别</th><th>年龄</th><th>职业</th><th>收入</th><th>城市</th>
-      <th>姓名缩写</th><th>手机后4位</th><th>子女数</th>
+      <th>ID</th><th>提交时间</th><th>入库时间</th><th>答题时长(秒)</th>
+      <th>性别</th><th>年龄</th><th>职业</th><th>收入</th><th>城市</th><th>地区</th>
+      <th>姓名缩写</th><th>手机后4位</th><th>子女数</th><th>测谎</th>
       <th>沟通总分</th><th>焦虑总分</th><th>韧性总分</th>
-      <th>IP地址</th>`;
+      <th>IP地址</th><th>设备</th><th>报告</th>`;
 
   // 34题列头（用题干前20字+维度）
   Q_TEXTS.forEach((q, i) => {
@@ -586,16 +588,24 @@ function renderDataTable(rows) {
     let scores = {};
     try { scores = JSON.parse(r.scores || '{}'); } catch(e) {}
 
+    // 答题时长：优先用存储的 total_duration，否则按起止时间计算
+    const durSec = (r.total_duration && r.total_duration > 0) ? r.total_duration
+                 : (function(){ const d = formatDuration(r); return d ? parseInt(d) : ''; })();
+
     html += `<tr>
       <td>${r.id}</td>
       <td style="font-size:11.5px;">${(r.created_at||'').replace('T',' ').slice(0,19)}</td>
-      <td>${formatDuration(r)}</td>
-      <td>${r.gender||''}</td><td>${r.age||''}</td><td>${r.occupation||''}</td><td>${r.income||''}</td><td>${r.city||''}</td>
+      <td style="font-size:11.5px;">${(r.server_time||'').replace('T',' ').slice(0,19)}</td>
+      <td>${durSec}</td>
+      <td>${r.gender||''}</td><td>${r.age||''}</td><td>${r.occupation||''}</td><td>${r.income||''}</td><td>${r.city||''}</td><td>${r.area||''}</td>
       <td>${r.name_code||''}</td><td>${r.phone_last4||''}</td><td>${r.children_count||''}</td>
+      <td>${r.lie_flag ? (r.lie_flag==1?'⚠️可疑':'正常') : ''}</td>
       <td><strong style="color:var(--brand);">${(scores.comm&&scores.comm.total)||''}</strong></td>
       <td><strong style="color:var(--orange);">${(scores.anx&&scores.anx.total)||''}</strong></td>
       <td><strong style="color:var(--green);">${(scores.res&&scores.res.total)||''}</strong></td>
-      <td style="font-size:11.5px;">${r.ip||''}</td>`;
+      <td style="font-size:11.5px;">${r.ip||''}</td>
+      <td style="font-size:11px;color:var(--sub);">${r.device_model||''}</td>
+      <td><button class="btn-sm" onclick="showReportForRow(${r.id})">查看报告</button></td>`;
 
     // 34题值：显示选项文本（鼠标悬停看分值）
     ans.forEach((v, i) => {
@@ -609,6 +619,97 @@ function renderDataTable(rows) {
 
   html += '</table>';
   wrap.innerHTML = html;
+}
+
+/* ========== 根据行ID查看报告 ========== */
+let _rowCache = {};  // 缓存当前页数据，避免二次请求
+function cacheRows(rows) { _rowCache = {}; rows.forEach(r => { _rowCache[r.id] = r; }); }
+
+function showReportForRow(id) {
+  const r = _rowCache[id];
+  if (!r) { alert('数据未找到，请刷新表格'); return; }
+  let reportHtml = r.report_html;
+  if (!reportHtml || reportHtml.trim() === '') {
+    // 未存储报告 → 用分数的等级方案重建
+    reportHtml = buildReportFromScores(r.scores, r);
+  }
+  openReportModal(reportHtml, id);
+}
+
+/* ========== 用存储的 scores 等级信息重建报告 ========== */
+const SCORE_DESC = {
+  comm: {
+    0: '您和孩子的沟通情况非常优秀。你们之间彼此信任，孩子愿意主动和您交流他遇到的问题，您也能耐心倾听、给予支持。这份关系是孩子成长中最重要的底气。',
+    1: '您和孩子的沟通情况良好。大多数时候孩子愿意向您表达想法，您也能给予回应和支持。继续保持开放和尊重，连接会更有深度。',
+    2: '您和孩子的沟通情况处于一般水平。某些时刻孩子不太愿意开口，或对话容易陷入说教/争执。试着在冲突时先停一停，听听孩子真正想说什么。',
+    3: '您和孩子的沟通情况目前不太乐观。孩子较少主动表达，或沟通中您和孩子都容易感到挫败。建议参加亲子沟通主题团辅，学习更有效的倾听与回应方式。'
+  },
+  anx: {
+    0: '您对孩子的学业焦虑较低。您能比较从容地看待孩子的学习，孩子也不会因您而感到太大压力。这种松弛状态对孩子非常珍贵。',
+    1: '您对孩子的学业焦虑处于一般水平。您会关心学习，但通常能控制在合理范围。继续保持适度关注，不把它变成催促。',
+    2: '您对孩子的学业焦虑较强。您会比较担心成绩、习惯或未来，这种焦虑有时不自觉地传递给孩子。把关注点从结果移向过程，会让自己和孩子都轻松些。',
+    3: '您对孩子的学业焦虑很强。您可能经常为学习感到紧张、睡不好或忍不住催促。请优先照顾好自己的情绪，建议参加家长焦虑调节主题团辅。'
+  },
+  res: {
+    0: '孩子的心理韧性很好。面对变化和困难时，孩子通常能适应、想办法应对并较快恢复，这是受益终生的能力。',
+    1: '孩子的心理韧性良好。大多数情况下孩子能面对困难并尝试解决，继续在家庭中提供安全的支持空间即可。',
+    2: '孩子的心理韧性处于一般水平。遇到较大困难时孩子可能需要更多陪伴与引导，帮他拆解问题、积累小成功会很有帮助。',
+    3: '孩子的心理韧性偏弱。面对挫折时孩子容易卡住或退缩。建议多创造「安全试错」的机会，必要时寻求专业支持。'
+  }
+};
+function buildReportFromScores(scoresJson, r) {
+  let scores = {};
+  try { scores = JSON.parse(scoresJson || '{}'); } catch(e) {}
+  const dimMeta = {
+    comm: { name: '亲子沟通情况', color: '#3a6ea5' },
+    anx:  { name: '学业焦虑',     color: '#e07a3e' },
+    res:  { name: '心理韧性',     color: '#2d9d78' }
+  };
+  let html = `<div style="font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;max-width:680px;">`;
+  html += `<h2 style="margin:0 0 4px;font-size:20px;">心理关爱评估报告</h2>`;
+  html += `<p style="color:#888;font-size:12px;margin:0 0 18px;">ID #${r.id} · 提交时间 ${(r.created_at||'').replace('T',' ').slice(0,19)} · <em>由等级方案重建</em></p>`;
+  const sevColor = ['#2d9d78','#e0a93b','#e07a3e','#d9543b'];
+  for (const key of ['comm','anx','res']) {
+    const s = scores[key];
+    if (!s) continue;
+    const meta = dimMeta[key];
+    const lv = (typeof s.level === 'object') ? s.level : (s.lvl || {});
+    const sev = (lv && typeof lv.severity === 'number') ? lv.severity : 1;
+    const levelText = (lv && lv.label) || '';
+    const concern = (typeof s.concern === 'number') ? s.concern + '%' : (s.concern || '');
+    const desc = (SCORE_DESC[key] && SCORE_DESC[key][sev]) || '';
+    html += `<div style="border-left:4px solid ${meta.color};padding:12px 16px;margin:14px 0;background:#fafbfe;border-radius:0 8px 8px 0;">
+      <div style="font-size:15px;font-weight:700;color:${meta.color};margin-bottom:6px;">${meta.name}</div>
+      <div style="font-size:13px;margin-bottom:4px;"><strong>总分：</strong>${s.total} 分 &nbsp;·&nbsp; <strong>等级：</strong><span style="color:${sevColor[sev]};font-weight:700;">${levelText}</span></div>
+      <div style="font-size:13px;margin-bottom:6px;"><strong>关注指数：</strong>${concern}</div>
+      <div style="font-size:13px;line-height:1.6;color:#444;">${desc}</div>
+    </div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+/* ========== 报告弹窗 ========== */
+function openReportModal(html, id) {
+  let modal = document.getElementById('reportModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'reportModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(20,30,50,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:14px;max-width:760px;width:100%;max-height:88vh;overflow:auto;position:relative;">
+        <button onclick="closeReportModal()" style="position:absolute;top:12px;right:16px;border:none;background:#f0f2f7;color:#555;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;">×</button>
+        <div id="reportModalBody" style="padding:28px;"></div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeReportModal(); });
+  }
+  document.getElementById('reportModalBody').innerHTML = html;
+  modal.style.display = 'flex';
+}
+function closeReportModal() {
+  const m = document.getElementById('reportModal');
+  if (m) m.style.display = 'none';
 }
 
 function renderPager(pg) {
