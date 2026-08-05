@@ -123,6 +123,11 @@ async function initPool() {
     `);
 
     console.log('✅ MySQL 表已就绪（responses + sessions）');
+
+    // 兼容性升级：为已存在的表添加 total_duration 列
+    try {
+      await conn.execute(`ALTER TABLE responses ADD COLUMN total_duration INT DEFAULT 0`);
+    } catch (e) { /* 列已存在则忽略 */ }
   } finally {
     conn.release();
   }
@@ -198,8 +203,8 @@ app.post('/api/submit', async (req, res) => {
         children_count, child_age_1, child_gender_1,
         child_age_2, child_gender_2, child_age_3, child_gender_3, child_extra,
         openid, wechat_nickname, wechat_headimgurl, payload_json,
-        answers, scores, report_html
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        answers, scores, report_html, total_duration
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         new Date(),
         user.gender || '', user.age || '', user.occupation || '', user.income || '', user.contact || '',
@@ -217,7 +222,8 @@ app.post('/api/submit', async (req, res) => {
         openid, wxNick, wxHead,
         JSON.stringify(req.body),
         JSON.stringify(answers || {}), JSON.stringify(scores || {}),
-        report_html || ''
+        report_html || '',
+        req.body.total_duration || 0
       ]
     );
     res.json({ success: true, id: result.insertId });
@@ -426,7 +432,8 @@ app.get('/api/responses', async (req, res) => {
               name_code, phone_last4, city, children_count,
               child_age_1, child_gender_1, child_age_2, child_gender_2,
               child_age_3, child_gender_3, lie_flag,
-              answers, scores, start_time, submit_time, device_model
+              answers, scores, start_time, submit_time, device_model,
+              ip, total_duration
        FROM responses ${whereSql}
        ORDER BY id DESC LIMIT ? OFFSET ?`,
       [...params, pageSize, offset]
@@ -571,7 +578,14 @@ app.get('/api/stats', async (req, res) => {
       dimensions,
       demographics: { gender: genderMap, age: ageMap, city: cityMap },
       dailyTrend,
-      qStats
+      qStats,
+      // 调试：返回第一条记录的原始 answers 样本，用于排查数据为空问题
+      _debugSample: rows.length > 0 ? {
+        id: rows[0].id,
+        answers_type: typeof rows[0].answers,
+        answers_preview: (rows[0].answers || '').toString().slice(0, 200),
+        scores_preview: (rows[0].scores || '').toString().slice(0, 200)
+      } : null
     });
   } catch (e) {
     console.error('统计失败:', e);

@@ -708,6 +708,9 @@ function showQuizPart(partIdx){
 
   // 恢复之前已答的选项（从缓存）
   setTimeout(() => restoreCurrentPartAnswers(), 0);
+
+  // 翻页后滚动到页面顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderQuizNav(){
@@ -778,7 +781,7 @@ function renderQuestion(sc, q, idx){
   let opts='';
   sc.options.forEach((op,oi)=>{
     const val=oi+1;
-    opts+=`<label><input type="radio" name="${gid}" value="${val}"><span>${val}. ${op}</span></label>`;
+    opts+=`<label><input type="radio" name="${gid}" value="${val}"><span>${op}</span></label>`;
   });
   return `<div class="q">
     <div class="qt"><span class="qnum">${idx}</span>${q.t}</div>
@@ -790,7 +793,7 @@ function renderLieQuestion(name, text, idx){
   let opts='';
   LIE_OPTS.forEach((op,oi)=>{
     const val=oi+1;
-    opts+=`<label><input type="radio" name="${name}" value="${val}"><span>${val}. ${op}</span></label>`;
+    opts+=`<label><input type="radio" name="${name}" value="${val}"><span>${op}</span></label>`;
   });
   return `<div class="q">
     <div class="qt"><span class="qnum">${idx}</span>${text}</div>
@@ -889,12 +892,20 @@ async function submitQuiz(){
 async function saveReport(user,answers,scores,lieFlag){
   if(isReportOnly) return;
   const submitTime=new Date().toISOString();
+  // 计算答题总时长（秒）
+  let totalDuration = 0;
+  if(startTime){
+    const t0=new Date(startTime).getTime();
+    const t1=new Date(submitTime).getTime();
+    if(!isNaN(t0)&&!isNaN(t1)&&t1>=t0) totalDuration=Math.round((t1-t0)/1000);
+  }
   const payload={
     lie_flag: lieFlag || 0,
     user, answers,
     scores,
     start_time: startTime || '',
     submit_time: submitTime,
+    total_duration: totalDuration,
     device: collectDevice(),
     report_html:document.getElementById('step-report').innerHTML,
     token: sessionToken || ''

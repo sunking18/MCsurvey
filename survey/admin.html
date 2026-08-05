@@ -163,6 +163,8 @@
 <script>
 let API_KEY = '';
 let trendChartInst = null;
+const SESSION_KEY = 'admin_session';
+const SESSION_DURATION = 30 * 60 * 1000; // 30分钟（毫秒）
 
 /* ========== 登录/登出 ========== */
 function doLogin(){
@@ -174,6 +176,8 @@ function doLogin(){
     .then(r=>r.json())
     .then(j=>{
       if(!j.success){ showErr(err,j.message||'密钥错误'); return; }
+      // 保存登录会话
+      saveSession(key);
       document.getElementById('loginPage').style.display='none';
       document.getElementById('app').style.display='block';
       renderAll(j);
@@ -181,9 +185,34 @@ function doLogin(){
     })
     .catch(e=>{ showErr(err,'网络错误：'+e.message); });
 }
+
+function saveSession(key){
+  try {
+    const session = { key, time: Date.now() };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch(e) {}
+}
+
+function loadSession(){
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    const session = JSON.parse(raw);
+    if(Date.now() - session.time > SESSION_DURATION){
+      sessionStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return session.key;
+  } catch(e){ return null; }
+}
+
+function clearSession(){
+  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+}
 function showErr(el,msg){ el.textContent=msg; el.style.display='block'; }
 function doLogout(){
   API_KEY='';
+  clearSession();
   document.getElementById('app').style.display='none';
   document.getElementById('loginPage').style.display='flex';
   document.getElementById('keyInput').value='';
@@ -392,8 +421,16 @@ function renderQStats(qs){
   wrap.innerHTML = html;
 }
 
-/* ========== 自动登录（URL 带 key 参数时） ========== */
+/* ========== 自动登录（优先检查session，其次URL带key参数） ========== */
 (function(){
+  // 1) 先检查30分钟内的session
+  const savedKey = loadSession();
+  if(savedKey){
+    document.getElementById('keyInput').value = savedKey;
+    doLogin();
+    return;
+  }
+  // 2) 其次检查URL参数
   const p = new URLSearchParams(location.search);
   const k = p.get('key');
   if(k){ document.getElementById('keyInput').value=k; doLogin(); }
@@ -503,7 +540,8 @@ function renderDataTable(rows) {
       <th>ID</th><th>提交时间</th><th>答题时长</th>
       <th>性别</th><th>年龄</th><th>职业</th><th>收入</th><th>城市</th>
       <th>姓名缩写</th><th>手机后4位</th><th>子女数</th>
-      <th>沟通总分</th><th>焦虑总分</th><th>韧性总分</th>`;
+      <th>沟通总分</th><th>焦虑总分</th><th>韧性总分</th>
+      <th>IP地址</th>`;
 
   // 34题列头（用题干前20字+维度）
   Q_TEXTS.forEach((q, i) => {
@@ -527,7 +565,8 @@ function renderDataTable(rows) {
       <td>${r.name_code||''}</td><td>${r.phone_last4||''}</td><td>${r.children_count||''}</td>
       <td><strong style="color:var(--brand);">${(scores.comm&&scores.comm.total)||''}</strong></td>
       <td><strong style="color:var(--orange);">${(scores.anx&&scores.anx.total)||''}</strong></td>
-      <td><strong style="color:var(--green);">${(scores.res&&scores.res.total)||''}</strong></td>`;
+      <td><strong style="color:var(--green);">${(scores.res&&scores.res.total)||''}</strong></td>
+      <td style="font-size:11.5px;">${r.ip||''}</td>`;
 
     // 34题值：显示选项文本（鼠标悬停看分值）
     ans.forEach((v, i) => {
