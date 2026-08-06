@@ -399,7 +399,7 @@ function renderQStats(qs){
 
   // 按 comm / anx / res 分组
   const groups = { comm:[], anx:[], res:[] };
-  qs.forEach(q => { if(groups[q.dim]!==undefined) groups[q.dim].push(q); });
+  qs.forEach(q => { if(groups[q.cat]!==undefined) groups[q.cat].push(q); });
 
   // 补充维度名
   const dimNames = { comm:'亲子沟通情况', anx:'学业焦虑', res:'心理韧性' };
@@ -408,12 +408,13 @@ function renderQStats(qs){
   for (const [k, list] of Object.entries(groups)){
     if(list.length === 0) continue;
     html += `<h4 style="margin:18px 0 10px;font-size:14px;color:var(--brand);">${dimNames[k]}</h4>`;
-    html += `<table><tr><th>题号</th><th>维度</th><th>平均分</th><th>作答人数</th><th>选项分布参考</th></tr>`;
+    html += `<table><tr><th>题号</th><th>维度</th><th>题干</th><th>平均分</th><th>作答人数</th><th>选项分布参考</th></tr>`;
     for (const q of list){
       const avgColor = q.avg >= 4 ? 'green' : q.avg >= 3 ? '' : q.avg >= 2 ? 'orange' : 'red';
       const optsStr = (q.opts||[]).map((o,i)=>`${i+1}.${o}`).join(' / ');
+      const title = q.text ? ` title="${q.text.replace(/"/g, '&quot;')}"` : '';
       html += `<tr>
-        <td>q${q.q}</td><td>${q.dim}</td><td><strong class="${avgColor}">${q.avg.toFixed(2)}</strong></td><td>${q.count}</td><td style="font-size:11.5px;color:var(--sub);max-width:300px;">${optsStr}</td>
+        <td>q${q.q}</td><td>${q.dim}</td><td style="max-width:280px;"${title}>${q.text ? (q.text.length>28 ? q.text.slice(0,28)+'…' : q.text) : ''}</td><td><strong class="${avgColor}">${q.avg.toFixed(2)}</strong></td><td>${q.count}</td><td style="font-size:11.5px;color:var(--sub);max-width:300px;">${optsStr}</td>
       </tr>`;
     }
     html += `</table>`;

@@ -516,9 +516,9 @@ app.get('/api/stats', async (req, res) => {
         if (!isNaN(t0) && !isNaN(t1) && t1 >= t0) { totalDur += (t1 - t0) / 1000; durCnt++; }
       }
 
-      // 每题分数
+      // 每题分数（只 push 有效 1-5 分值）
       const qVals = extractAnswers(r.answers);
-      qVals.forEach((v, i) => { if (v !== '') qArrays[i].push(v); });
+      qVals.forEach((v, i) => { if (v !== null && v !== '') qArrays[i].push(v); });
 
       // 人口统计
       const g = (r.gender || '未填').trim(); genderMap[g] = (genderMap[g] || 0) + 1;
@@ -561,9 +561,10 @@ app.get('/api/stats', async (req, res) => {
       }
     }
 
-    // 每题平均分
+    // 每题平均分（cat 用于前端按 comm/anx/res 分组）
     const qStats = qArrays.map((arr, i) => ({
       q: i + 1,
+      cat: i < 12 ? 'comm' : i < 24 ? 'anx' : 'res',
       text: Q_META[i].t || '',
       dim: Q_META[i].dim || '',
       reverse: Q_META[i].reverse || false,
