@@ -478,9 +478,16 @@ const Q_TEXTS = [
   {t:'当孩子伤心、害怕或想发脾气时，通常知道怎样让自己慢慢平静下来。',dim:'情绪平复',opts:['从不这样','很少这样','有时这样','经常这样','总是这样']}
 ];
 
+// 兼容 mysql2 返回的 JSON 列：可能是对象（已解析）也可能是字符串
+function toObj(x) {
+  if (x && typeof x === 'object') return x;
+  if (x === null || x === undefined || x === '') return {};
+  if (typeof x === 'string') { try { return JSON.parse(x); } catch (e) { return {}; } }
+  return {};
+}
+
 function parseAnswers(ansJson) {
-  let a = {};
-  try { a = JSON.parse(ansJson || '{}'); } catch (e) { a = {}; }
+  const a = toObj(ansJson);
   const result = [];
   const keys = ['comm','anx','res'];
   for (const k of keys) {
@@ -585,8 +592,7 @@ function renderDataTable(rows) {
   // 数据行
   for (const r of rows) {
     const ans = parseAnswers(r.answers);
-    let scores = {};
-    try { scores = JSON.parse(r.scores || '{}'); } catch(e) {}
+    const scores = toObj(r.scores);
 
     // 答题时长：优先用存储的 total_duration，否则按起止时间计算
     const durSec = (r.total_duration && r.total_duration > 0) ? r.total_duration
@@ -658,8 +664,7 @@ const SCORE_DESC = {
   }
 };
 function buildReportFromScores(scoresJson, r) {
-  let scores = {};
-  try { scores = JSON.parse(scoresJson || '{}'); } catch(e) {}
+  const scores = toObj(scoresJson);
   const dimMeta = {
     comm: { name: '亲子沟通情况', color: '#3a6ea5' },
     anx:  { name: '学业焦虑',     color: '#e07a3e' },

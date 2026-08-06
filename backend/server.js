@@ -290,10 +290,19 @@ app.get('/api/export', async (req, res) => {
   }
 });
 
+// 兼容 mysql2 的 JSON 列：可能是对象（已解析）或字符串
+function toObjSafe(x) {
+  if (x && typeof x === 'object') return x;
+  if (x === null || x === undefined || x === '') return {};
+  if (typeof x === 'string') { try { return JSON.parse(x); } catch (e) { return {}; } }
+  return {};
+}
+
 // ========== 从 answers JSON 中提取每题原始分（1-5） ==========
 function extractAnswers(answersJson) {
-  let a = {};
-  try { a = JSON.parse(answersJson || '{}'); } catch (e) { a = {}; }
+  let a;
+  if (answersJson && typeof answersJson === 'object') a = answersJson;
+  else { try { a = JSON.parse(answersJson || '{}'); } catch (e) { a = {}; } }
   const result = [];
   for (const k of SCALE_KEYS) {
     const arr = Array.isArray(a[k]) ? a[k] : [];
@@ -395,8 +404,9 @@ app.get('/api/export.csv', async (req, res) => {
 
 // ========== 从 scores JSON 提取各维度总分 ==========
 function extractScores(scoresJson) {
-  let s = {};
-  try { s = JSON.parse(scoresJson || '{}'); } catch (e) { s = {}; }
+  let s;
+  if (scoresJson && typeof scoresJson === 'object') s = scoresJson;
+  else { try { s = JSON.parse(scoresJson || '{}'); } catch (e) { s = {}; } }
   return {
     comm: (s.comm && s.comm.total) ? s.comm.total : '',
     anx:  (s.anx && s.anx.total) ? s.anx.total : '',
@@ -494,8 +504,7 @@ app.get('/api/stats', async (req, res) => {
 
     for (const r of rows) {
       // 维度分
-      let s = {};
-      try { s = JSON.parse(r.scores || '{}'); } catch (e) {}
+      const s = toObjSafe(r.scores);
       for (const k of SCALE_KEYS) {
         if (s[k] && typeof s[k].total === 'number') dimData[k].push(s[k].total);
       }
