@@ -280,6 +280,14 @@
         </div>
 
         <div id="children-fields"></div>
+
+        <div class="field" style="margin-top:18px;">
+          <label>如果后续开设相关主题课程，您更希望参加哪一类？<span class="req">*</span></label>
+          <div class="opts-row" id="course-preference-opts">
+            <label><input type="radio" name="course_preference" value="孩子学业压力缓解课程"> 孩子学业压力缓解课程</label>
+            <label><input type="radio" name="course_preference" value="亲子关系沟通课程"> 亲子关系沟通课程</label>
+          </div>
+        </div>
       </form>
       <div class="err" id="basicErr">请填写完整必填项后再继续。</div>
       <div class="btn-row">
@@ -508,6 +516,7 @@ function checkBasic(){
   if(!b.gender) missing.push('您的性别');
   if(!b.age) missing.push('您的年龄');
   if(!b.children_count) missing.push('您有几个子女');
+  if(!b.course_preference) missing.push('课程主题偏好');
   // 身份识别字段：所有人均需填写
   if(!b.name_code) missing.push('姓名首字母缩写');
   else if(!/^[A-Za-z]{2,8}$/.test(b.name_code)) errors.push('姓名首字母缩写应为 2-8 位英文字母（如：ZW）');
@@ -568,7 +577,7 @@ function collectBasic(){
   return obj;
 }
 function initRadioGroups(){
-  ['gender-opts','child-gender-opts'].forEach(id=>{
+  ['gender-opts','child-gender-opts','course-preference-opts'].forEach(id=>{
     const el=document.getElementById(id);
     if(!el) return;
     el.addEventListener('change',e=>{

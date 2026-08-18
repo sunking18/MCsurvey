@@ -578,7 +578,7 @@ function renderDataTable(rows) {
     <tr>
       <th>ID</th><th>提交时间</th><th>入库时间</th><th>答题时长(秒)</th>
       <th>性别</th><th>年龄</th><th>职业</th><th>收入</th><th>城市</th><th>地区</th>
-      <th>姓名缩写</th><th>手机后4位</th><th>子女数</th><th>测谎</th>
+      <th>姓名缩写</th><th>手机后4位</th><th>子女数</th><th>课程偏好</th><th>测谎</th>
       <th>沟通总分</th><th>焦虑总分</th><th>韧性总分</th>
       <th>IP地址</th><th>设备</th><th>报告</th>`;
 
@@ -605,7 +605,7 @@ function renderDataTable(rows) {
       <td style="font-size:11.5px;">${(r.server_time||'').replace('T',' ').slice(0,19)}</td>
       <td>${durSec}</td>
       <td>${r.gender||''}</td><td>${r.age||''}</td><td>${r.occupation||''}</td><td>${r.income||''}</td><td>${r.city||''}</td><td>${r.area||''}</td>
-      <td>${r.name_code||''}</td><td>${r.phone_last4||''}</td><td>${r.children_count||''}</td>
+      <td>${r.name_code||''}</td><td>${r.phone_last4||''}</td><td>${r.children_count||''}</td><td>${r.course_preference||''}</td>
       <td>${r.lie_flag ? (r.lie_flag==1?'⚠️可疑':'正常') : ''}</td>
       <td><strong style="color:var(--brand);">${(scores.comm&&scores.comm.total)||''}</strong></td>
       <td><strong style="color:var(--orange);">${(scores.anx&&scores.anx.total)||''}</strong></td>

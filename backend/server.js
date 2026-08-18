@@ -94,6 +94,7 @@ async function initPool() {
         ip TEXT, user_agent TEXT, device_model TEXT, screen TEXT,
         start_time DATETIME, submit_time DATETIME, server_time DATETIME,
         children_count TEXT,
+        course_preference TEXT,
         child_age_1 TEXT, child_gender_1 TEXT,
         child_age_2 TEXT, child_gender_2 TEXT,
         child_age_3 TEXT, child_gender_3 TEXT,
@@ -127,6 +128,10 @@ async function initPool() {
     // 兼容性升级：为已存在的表添加 total_duration 列
     try {
       await conn.execute(`ALTER TABLE responses ADD COLUMN total_duration INT DEFAULT 0`);
+    } catch (e) { /* 列已存在则忽略 */ }
+    // 兼容性升级：为已存在的表添加 course_preference 列
+    try {
+      await conn.execute(`ALTER TABLE responses ADD COLUMN course_preference TEXT`);
     } catch (e) { /* 列已存在则忽略 */ }
   } finally {
     conn.release();
@@ -200,11 +205,11 @@ app.post('/api/submit', async (req, res) => {
         created_at, gender, age, occupation, income, contact,
         name_code, phone_last4, city, area, lie_flag,
         ip, user_agent, device_model, screen, start_time, submit_time, server_time,
-        children_count, child_age_1, child_gender_1,
+        children_count, course_preference, child_age_1, child_gender_1,
         child_age_2, child_gender_2, child_age_3, child_gender_3, child_extra,
         openid, wechat_nickname, wechat_headimgurl, payload_json,
         answers, scores, report_html, total_duration
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         new Date(),
         user.gender || '', user.age || '', user.occupation || '', user.income || '', user.contact || '',
@@ -214,7 +219,7 @@ app.post('/api/submit', async (req, res) => {
         start_time ? new Date(start_time) : null,
         submit_time ? new Date(submit_time) : null,
         new Date(serverTime),
-        user.children_count || '',
+        user.children_count || '', user.course_preference || '',
         user.child_age_1 || '', user.child_gender_1 || '',
         user.child_age_2 || '', user.child_gender_2 || '',
         user.child_age_3 || '', user.child_gender_3 || '',
@@ -358,7 +363,7 @@ app.get('/api/export.csv', async (req, res) => {
     const headers = [
       'id', '提交时间', '答题时长(秒)',
       '性别', '年龄', '职业', '收入', '所在城市',
-      '姓名缩写', '手机后四位', '子女数',
+      '姓名缩写', '手机后四位', '子女数', '课程主题偏好',
       '沟通总分', '焦虑总分', '韧性总分',
       ...qHeaders
     ];
@@ -385,7 +390,7 @@ app.get('/api/export.csv', async (req, res) => {
         (r.server_time || r.created_at || '').replace(/T/, ' ').slice(0, 19),
         dur,
         r.gender || '', r.age || '', r.occupation || '', r.income || '', r.city || '',
-        r.name_code || '', r.phone_last4 || '', r.children_count || '',
+        r.name_code || '', r.phone_last4 || '', r.children_count || '', r.course_preference || '',
         scores.comm || '', scores.anx || '', scores.res || '',
         ...qVals
       ];
@@ -438,8 +443,8 @@ app.get('/api/responses', async (req, res) => {
     const total = countRes[0][0].total;
 
     const [rows] = await pool.execute(
-      `SELECT id, created_at, server_time, gender, age, occupation, income, contact, area,
-              name_code, phone_last4, city, children_count,
+      `       SELECT id, created_at, server_time, gender, age, occupation, income, contact, area,
+              name_code, phone_last4, city, children_count, course_preference,
               child_age_1, child_gender_1, child_age_2, child_gender_2,
               child_age_3, child_gender_3, lie_flag,
               answers, scores, start_time, submit_time, device_model,
