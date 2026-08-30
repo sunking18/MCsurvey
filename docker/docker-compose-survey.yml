@@ -1,0 +1,89 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: survey-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Survey@2026!Secure}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-survey}
+      MYSQL_USER: ${MYSQL_USER:-survey}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-SurveyDb@2026}
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-net
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: survey-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      EXPORT_KEY: ${EXPORT_KEY:-admin123}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER:-survey}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-SurveyDb@2026}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-survey}
+      MP_APPID: ${MP_APPID:-}
+      MP_SECRET: ${MP_SECRET:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://xunxinli.com}
+      SURVEY_PATH: ${SURVEY_PATH:-/survey}
+    ports:
+      - "3000:3000"
+    volumes:
+      # 与 nginx 服务保持一致，均指向 docker/survey/（最新版前端）
+      - ./survey/index.html:/app/index.html:ro
+      - ./survey/poster.html:/app/poster.html:ro
+      - ./survey/admin.html:/app/admin.html:ro
+      - ./survey/assets:/app/assets:ro
+      - ../MP_verify_b1s8XUY2r8hgdUhB.txt:/app/MP_verify_b1s8XUY2r8hgdUhB.txt:ro
+    networks:
+      - app-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: survey-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /data/xunxinli:/usr/share/nginx/website:ro
+      - ../site:/usr/share/nginx/html:ro
+      - ./survey:/usr/share/nginx/html/survey:ro
+      - ../MP_verify_b1s8XUY2r8hgdUhB.txt:/usr/share/nginx/html/MP_verify_b1s8XUY2r8hgdUhB.txt:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    networks:
+      - app-net
+
+volumes:
+  mysql_data:
+    driver: local
+  certbot_conf:
+    driver: local
+  certbot_www:
+    driver: local
+
+networks:
+  app-net:
+    driver: bridge
