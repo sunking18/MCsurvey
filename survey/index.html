@@ -143,7 +143,7 @@
   /* 公众号关注卡片（报告末尾） */
   .follow-card{margin-top:16px;padding:20px 18px;background:var(--brand-soft);border:1px solid var(--line);border-radius:14px;text-align:center;}
   .follow-card .fc-title{font-size:15.5px;font-weight:700;color:var(--brand);margin-bottom:10px;}
-  .follow-card .fc-text{font-size:13.5px;line-height:1.9;color:var(--ink);margin:0 0 10px;text-align:left;}
+  .follow-card .fc-text{font-size:13.5px;line-height:1.9;color:var(--ink);margin:0 0 10px;text-align:left;text-wrap:pretty;text-wrap:balance;}
   .follow-card .fc-text b{color:var(--brand);}
   .follow-card .fc-qr{width:168px;height:168px;border-radius:12px;border:5px solid #fff;box-shadow:0 4px 14px rgba(62,51,43,.12);display:block;margin:4px auto 8px;}
   .follow-card .fc-tip{font-size:12.5px;color:var(--sub);}
@@ -1085,7 +1085,7 @@ function renderEnding(){
 function renderFollowCard(){
   return `<div class="follow-card">
     <div class="fc-title">🌱 每周一 · 陪你读懂孩子</div>
-    <p class="fc-text">“唠里唠叨心理”公众号<b>每周一</b>发布儿童成长专题文章，用心理学的视角，陪你一起看见孩子行为背后的感受与需要。</p>
+    <p class="fc-text">“唠里唠叨心理”公众号<b>每周一</b>发布儿童成长专题文章，用心理学视角，陪你一起看见孩子行为背后的感受与需要。</p>
     <p class="fc-text">这里还会持续分享更多心理学知识：情绪调节与自我照顾、亲子沟通的日常练习、压力与焦虑的科学认识……如果您愿意，欢迎关注，我们一起学习，慢慢成长。</p>
     <img class="fc-qr" src="assets/gzh-qrcode.jpg" alt="公众号「唠里唠叨心理」二维码">
     <div class="fc-tip">长按识别二维码，关注公众号</div>
