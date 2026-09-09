@@ -172,8 +172,7 @@ function doLogin(){
   const err = document.getElementById('loginErr');
   if(!key){ showErr(err,'请输入密钥'); return; }
   API_KEY = key;
-  fetch('/api/stats?key='+encodeURIComponent(key))
-    .then(r=>r.json())
+  fetchJSON('/api/stats?key='+encodeURIComponent(key))
     .then(j=>{
       if(!j.success){ showErr(err,j.message||'密钥错误'); return; }
       // 保存登录会话
@@ -210,6 +209,15 @@ function clearSession(){
   try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
 }
 function showErr(el,msg){ el.textContent=msg; el.style.display='block'; }
+/* 统一 JSON 请求：后端未响应时网关会返回 HTML 错误页（如 502），
+   Safari 对 res.json() 解析失败只报 "The string did not match the expected pattern."，
+   这里改为手动解析并给出可读提示（含 HTTP 状态码，便于定位） */
+async function fetchJSON(url){
+  const r = await fetch(url);
+  const t = await r.text();
+  try { return JSON.parse(t); }
+  catch(e){ throw new Error('服务返回异常（HTTP ' + r.status + '），后端可能未启动或正在重启，请稍后重试；若持续出现请检查服务器容器状态'); }
+}
 function doLogout(){
   API_KEY='';
   clearSession();
@@ -226,8 +234,7 @@ function setLinks(k){
 /* ========== 刷新 ========== */
 function refreshData(){
   if(!API_KEY) return;
-  fetch('/api/stats?key='+encodeURIComponent(API_KEY))
-    .then(r=>r.json())
+  fetchJSON('/api/stats?key='+encodeURIComponent(API_KEY))
     .then(j=>{
       if(!j.success){ alert(j.message||'获取失败'); return; }
       renderAll(j);
@@ -527,8 +534,7 @@ function loadDataTable(page) {
   if (search) url += '&search=' + encodeURIComponent(search);
 
   document.getElementById('dataTableWrap').innerHTML = '<div class="loading">加载中...</div>';
-  fetch(url)
-    .then(r => r.json())
+  fetchJSON(url)
     .then(j => {
       if (!j.success) {
         // ⚡ 降级：/api/responses 不可用时回退到 /api/export
@@ -551,8 +557,7 @@ function loadDataTable(page) {
 function loadDataTableFallback() {
   if (!API_KEY) return;
   document.getElementById('dataTableWrap').innerHTML = '<div class="loading">加载中（备用接口）...</div>';
-  fetch('/api/export?key=' + encodeURIComponent(API_KEY))
-    .then(r => r.json())
+  fetchJSON('/api/export?key=' + encodeURIComponent(API_KEY))
     .then(j => {
       if (!j.success) { document.getElementById('dataTableWrap').innerHTML = '<div class="empty">加载失败：' + (j.message||'未知错误') + '</div>'; return; }
       const allData = j.data || [];
