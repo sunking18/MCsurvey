@@ -140,6 +140,14 @@
   .ending{text-align:center;margin-top:22px;padding:16px;background:#fff;border:1px solid var(--line);border-radius:16px;}
   .ending .quote{font-size:15.5px;font-weight:700;color:var(--brand);margin:0 0 6px;}
   .ending .sub{font-size:13px;color:var(--sub);margin:0;}
+  /* 公众号关注卡片（报告末尾） */
+  .follow-card{margin-top:16px;padding:20px 18px;background:var(--brand-soft);border:1px solid var(--line);border-radius:14px;text-align:center;}
+  .follow-card .fc-title{font-size:15.5px;font-weight:700;color:var(--brand);margin-bottom:10px;}
+  .follow-card .fc-text{font-size:13.5px;line-height:1.9;color:var(--ink);margin:0 0 10px;text-align:left;}
+  .follow-card .fc-text b{color:var(--brand);}
+  .follow-card .fc-qr{width:168px;height:168px;border-radius:12px;border:5px solid #fff;box-shadow:0 4px 14px rgba(62,51,43,.12);display:block;margin:4px auto 8px;}
+  .follow-card .fc-tip{font-size:12.5px;color:var(--sub);}
+  .follow-card .fc-slogan{margin-top:10px;font-size:13px;font-weight:700;color:var(--green);}
 
   .report-foot{text-align:center;margin-top:22px;color:var(--sub);font-size:13px;font-style:italic;}
   .disclaimer{font-size:11.5px;color:#b0a394;margin-top:14px;text-align:center;line-height:1.5;}
@@ -1070,7 +1078,19 @@ function renderCourse(scores){
 
 function renderEnding(){
   document.getElementById('ending').innerHTML=`<div class="quote">“养育孩子的路上，您不必完美。您只需要真实、温暖，并且愿意一直陪伴。这就够了。”</div>
-    <div class="sub">每一个愿意认真了解孩子的父母，都在为孩子的人生注入更多光。您已经迈出了最珍贵的一步。</div>`;
+    <div class="sub">每一个愿意认真了解孩子的父母，都在为孩子的人生注入更多光。您已经迈出了最珍贵的一步。</div>` + renderFollowCard();
+}
+
+/* 报告末尾：公众号关注引导 */
+function renderFollowCard(){
+  return `<div class="follow-card">
+    <div class="fc-title">🌱 每周一 · 陪你读懂孩子</div>
+    <p class="fc-text">养育的路上，理解比完美更重要。<br>「唠里叨话心理」公众号<b>每周一</b>都会发布儿童成长专题文章，用心理学的视角，陪你一起看见孩子行为背后的感受与需要——把每一次日常的陪伴，都变成滋养彼此的时刻。</p>
+    <p class="fc-text">这里还会持续分享更多你关心的心理学内容：情绪调节与自我照顾、亲子沟通的日常练习、压力与焦虑的科学认识……如果您愿意，欢迎关注，我们一起学习，慢慢生长。</p>
+    <img class="fc-qr" src="assets/gzh-qrcode.jpg" alt="公众号「唠里叨话心理」二维码">
+    <div class="fc-tip">长按识别二维码，关注公众号</div>
+    <div class="fc-slogan">向内寻，向外生 🌿</div>
+  </div>`;
 }
 
 function closeReport(){
