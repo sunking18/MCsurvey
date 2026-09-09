@@ -704,11 +704,11 @@ function showQuizPart(partIdx){
 
   sc.questions.forEach((q, qi)=>{
     const thisGlobalIdx = startGlobalIdx + qi;
-    // 第一部分倒数第二题前嵌入测谎题
+    // 第一部分倒数第二题前嵌入测谎题（测谎题占独立题号，其后题目序号顺延 +1）
     if(partIdx === 0 && q.n === 11){
-      html += renderLieQuestion('lie_1', '为确保您在认真阅读每道题，本题请直接选择「非常符合」。', thisGlobalIdx - 1);
+      html += renderLieQuestion('lie_1', '为确保您在认真阅读每道题，本题请直接选择「非常符合」。', thisGlobalIdx);
     }
-    html += renderQuestion(sc, q, thisGlobalIdx);
+    html += renderQuestion(sc, q, (partIdx === 0 && q.n >= 11) ? thisGlobalIdx + 1 : thisGlobalIdx);
   });
 
   html += '</div>';
@@ -788,12 +788,12 @@ function checkCurrentPart(){
   sc.questions.forEach((q, qi)=>{
     const thisGlobalIdx = globalIdx + qi;
     if(currentPart === 0 && q.n === 11){
-      // 检查测谎题
+      // 检查测谎题（题号与页面显示一致：测谎题为第 thisGlobalIdx 题）
       const el = document.querySelector('input[name="lie_1"]:checked');
-      if(!el) missing.push(`第 ${thisGlobalIdx - 1} 题`);
+      if(!el) missing.push(`第 ${thisGlobalIdx} 题`);
     }
     const el = document.querySelector(`input[name="${sc.key}_${q.n}"]:checked`);
-    if(!el) missing.push(`第 ${thisGlobalIdx} 题`);
+    if(!el) missing.push(`第 ${(currentPart === 0 && q.n >= 11) ? thisGlobalIdx + 1 : thisGlobalIdx} 题`);
   });
 
   return {complete: missing.length === 0, missing};
