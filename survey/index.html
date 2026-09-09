@@ -511,28 +511,38 @@ function goQuizFromBasic(){
 
 function checkBasic(){
   const b=collectBasic();
-  const missing=[];
-  const errors=[];
-  if(!b.gender) missing.push('您的性别');
-  if(!b.age) missing.push('您的年龄');
-  if(!b.children_count) missing.push('您有几个子女');
-  if(!b.course_preference) missing.push('课程主题偏好');
+  const missing=[];   // 未填的字段名（保留，供兼容）
+  const errors=[];    // 格式错误（保留，供兼容）
+  const problems=[];  // 统一提示：每个框一条具体文案，用于弹框展示
+  if(!b.gender){ missing.push('您的性别'); problems.push('请选择您的性别'); }
+  if(!b.age){ missing.push('您的年龄'); problems.push('请选择您的年龄'); }
+  if(!b.children_count){ missing.push('您有几个子女'); problems.push('请选择您有几个子女'); }
+  if(!b.course_preference){ missing.push('课程主题偏好'); problems.push('请选择希望参加的课程主题'); }
   // 身份识别字段：所有人均需填写
-  if(!b.name_code) missing.push('姓名首字母缩写');
-  else if(!/^[A-Za-z]{2,8}$/.test(b.name_code)) errors.push('姓名首字母缩写应为 2-8 位英文字母（如：ZW）');
-  if(!b.phone_last4) missing.push('手机号后四位');
-  else if(!/^\d{4}$/.test(b.phone_last4)) errors.push('手机号后四位应为 4 位数字');
-  if(!b.city) missing.push('所在城市');
+  if(!b.name_code){ missing.push('姓名首字母缩写'); problems.push('请填写姓名首字母缩写'); }
+  else if(!/^[A-Za-z]{2,8}$/.test(b.name_code) && !/^[\u4e00-\u9fa5]{2,4}$/.test(b.name_code)){
+    errors.push('姓名首字母缩写应为 2-8 位英文字母（如：ZW）');
+    problems.push('「姓名首字母缩写」请填 2-8 位英文字母（如：ZW）或 2-4 个中文汉字（如：张伟）');
+  }
+  if(!b.phone_last4){ missing.push('手机号后四位'); problems.push('请填写手机号后四位'); }
+  else if(!/^\d{4}$/.test(b.phone_last4)){
+    errors.push('手机号后四位应为 4 位数字');
+    problems.push('「手机号后四位」应填 4 位数字');
+  }
+  if(!b.city){ missing.push('所在城市'); problems.push('请填写所在城市'); }
   // 子女年龄范围校验
   const childCount = parseInt(b.children_count || '0', 10);
   for(let i=1; i<=childCount && i<=4; i++){
     const ageVal = b['child_age_'+i];
     if(ageVal !== undefined && ageVal !== ''){
       const age = parseInt(ageVal, 10);
-      if(isNaN(age) || age < 3 || age > 22) errors.push(`子女${i}年龄应在 3-22 岁之间`);
+      if(isNaN(age) || age < 3 || age > 22){
+        errors.push(`子女${i}年龄应在 3-22 岁之间`);
+        problems.push(`「子女${i}年龄」应在 3-22 岁之间，当前填写为“${ageVal}”`);
+      }
     }
   }
-  return {ok:missing.length===0 && errors.length===0, missing, errors};
+  return {ok:problems.length===0, missing, errors, problems};
 }
 function validateBasic(){ return checkBasic().ok; }
 
@@ -873,7 +883,12 @@ function computeScores(ans){
 async function submitQuiz(){
   const basicCheck=checkBasic();
   if(!basicCheck.ok){
-    showModal('请完善信息','<p>请补全以下基础信息必填项：</p><ul>'+basicCheck.missing.map(x=>'<li>'+x+'</li>').join('')+'</ul>');
+    // 单个问题：直接给该框的具体提示；两个及以上：逐条列进弹框
+    const p=basicCheck.problems;
+    const body = p.length===1
+      ? '<p>'+p[0]+'</p>'
+      : '<p>请补全以下 '+p.length+' 项基础信息：</p><ul>'+p.map(x=>'<li>'+x+'</li>').join('')+'</ul>';
+    showModal('请完善信息', body);
     goBasic();
     return;
   }
